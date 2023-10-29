@@ -1,1 +1,1 @@
-from src.Data_mgmt._Data_acquisition import DataAcquisition
+from src.Data_mgmt._Data_acquisition import *
