@@ -1,14 +1,9 @@
 from loguru import logger
 import time
 from typing import Callable
-
 from sshtunnel import SSHTunnelForwarder
 
-
-def _check_input(mandatory: list, **kwargs):
-    for elem in mandatory:
-        if elem not in kwargs:
-            raise ValueError(f"Mandatory keyword argument {elem} omitted")
+from src.utils import check_input
 
 
 def time_debug(func: Callable):
@@ -42,7 +37,7 @@ def ssh_tunnel(fun):
     """
 
     def wrap(*args, **kwargs):
-        _check_input(['ssh_host', 'ssh_user', 'ssh_pkey'], **kwargs)
+        check_input(['ssh_host', 'ssh_user', 'ssh_pkey'], **kwargs)
 
         ssh_host: str = kwargs.pop('ssh_host')
         ssh_user: str = kwargs.pop('ssh_user')
@@ -59,7 +54,7 @@ def ssh_tunnel(fun):
                 remote_bind_address=(local_address, local_port)
         ) as server:
             server.start()  # start ssh sever
-            logger.info("Server connected via ssh")
+            logger.info(f"Server {ssh_host} connected via ssh")
 
             kwargs['ssh_server'] = server  # give reference of server to decorated fun
             result = fun(*args, **kwargs)
