@@ -1,0 +1,5 @@
+loguru~=0.5.3
+sshtunnel~=0.4.0
+pandas~=2.1.1
+sqlalchemy~=2.0.21
+argparse~=1.4.0

@@ -17,6 +17,7 @@ from nba_api.stats.endpoints import leaguegamefinder
 from sqlalchemy import create_engine
 from sshtunnel import SSHTunnelForwarder
 from loguru import logger
+from src.Data_mgmt._wrappers import ssh_tunnel
 
 # Macros and definitions
 _PATH: str = "./resources/"
@@ -60,40 +61,32 @@ class DataAcquisition:
         elif o_from & FROM_CSV and fpath != "":
             self.df = pd.read_csv(fpath)
 
-    def save_data_to_database(self, ssh_host: str, ssh_user: str, ssh_pkey: str,
-                              db_name: str, table: str, schema: str, db_user: str, db_pwd: str) -> None:
+    @ssh_tunnel
+    def save_data_to_database(self, db_name: str, table: str, schema: str,
+                              db_user: str, db_pwd: str, ssh_server: SSHTunnelForwarder) -> None:
         """
         Connect  to postgres database via SSH tunnelling and create table from df
-        :param ssh_host: (str) host ssh server
-        :param ssh_user: (str) ssh username
-        :param ssh_pkey: (str) path to ssh private key
         :param db_name: (str) name of postgres database
         :param table: (str) name of table to be created / appended
         :param schema: (str) name of postgres schema
         :param db_user: (str) postgres db username
         :param db_pwd: (str) postgres db password
+        :param ssh_server: ADDED BY DECORATOR! Don't include in function call
         :return: (None)
+
+        for Keyword arguments for ssh tunnel see documentation of the decorator
         """
         if self.df is None:
             raise ValueError("No dataframe created")
 
-        with SSHTunnelForwarder(
-                (ssh_host, 22),
-                ssh_username=ssh_user,
-                ssh_pkey=ssh_pkey,
-                remote_bind_address=('127.0.0.1', 5432)
-        ) as server:
-            server.start()  # start ssh sever
-            logger.info("Server connected via ssh")
+        # connect to PostgreSQL
+        local_port = str(ssh_server.local_bind_port)
+        connect_string = f'postgresql://{db_user}:{db_pwd}@localhost:{local_port}/{db_name}'
+        engine = create_engine(connect_string)
+        logger.info(f"Postgres engine created for {connect_string}")
 
-            # connect to PostgreSQL
-            local_port = str(server.local_bind_port)
-            connect_string = f'postgresql://{db_user}:{db_pwd}@localhost:{local_port}/{db_name}'
-            engine = create_engine(connect_string)
-            logger.info(f"Postgres engine created for {connect_string}")
-
-            self.df.to_sql(table, engine, schema=schema)
-            logger.info("dataframe saved to databse")
+        self.df.to_sql(table, engine, schema=schema)
+        logger.info("dataframe saved to databse")
 
     def safe_data_csv(self, fname: str) -> None:
         filepath = Path(self.fpath + fname)
