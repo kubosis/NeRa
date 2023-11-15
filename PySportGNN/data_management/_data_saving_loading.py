@@ -5,7 +5,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from src.data_management._macros import PATH
+from PySportGNN.data_management._macros import PATH
 
 __all__ = ["save_to_pickle", "load_from_pickle", "save_json", "load_json",
            "safe_data_csv", "load_data_csv"]

@@ -1,8 +1,8 @@
 import argparse
 import sys
 
-from src.data_management import *
-from src.utils import check_input
+from PySportGNN.data_management import *
+from PySportGNN.utils import check_input
 
 
 def acquire_data(args):

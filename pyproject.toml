@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+
+build-backend = "setuptools.build_meta"
+[tool.setuptools]
+packages = ["PySportGNN"]
+
+[project]
+name = "PySportGNN"
+version = "0.0.1"
+description = "Package for basketball prediction with GNNs"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE.txt"}
+keywords = ["GNN", "Sport prediction"]
+dynamic = ["dependencies"]
+authors = [
+    {name = "Jakub Sukdol", email = "sukdojak@fel.cvut.cz"},
+]
+
+classifiers = [
+    "Development Status ::  1 - Alfa",
+    "Programming Language :: Python",
+    "Operating System :: Microsoft Windows, Linux"
+]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+repository = "https://github.com/kubosis/gnn_sport_prediction"

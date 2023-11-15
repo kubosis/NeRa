@@ -23,10 +23,10 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from src.utils.wrappers import ssh_tunnel
-from src.utils import check_input
-from src.data_management._macros import *
-from src.data_management._data_saving_loading import *
+from PySportGNN.utils.wrappers import ssh_tunnel
+from PySportGNN.utils import check_input
+from PySportGNN.data_management._macros import *
+from PySportGNN.data_management._data_saving_loading import *
 
 
 @ssh_tunnel
