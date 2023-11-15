@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 
 run_conf.txt
+
+resources/.~lock.*.csv#
