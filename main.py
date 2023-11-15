@@ -11,7 +11,7 @@ def acquire_data(args):
     kwargs = {}
     if args.from_csv:
         from_flag = FROM_CSV
-        kwargs['fname'] = "basketball_other.csv"
+        kwargs['fname'] = "other_leagues.csv"
         da.get_data(from_flag, **kwargs)
     elif args.from_nba_stats:
         date_from: str = "01/01/1990"
@@ -53,7 +53,7 @@ def acquire_data(args):
                                  ssh_user="sukdojak",
                                  ssh_pkey="~/.ssh/id_ed25519",
                                  db_name="students",
-                                 table="NBA",
+                                 table="basketball_other",
                                  schema="basketball",
                                  db_user="sukdojak",
                                  db_pwd=args.dbs_pwd)
