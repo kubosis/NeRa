@@ -87,6 +87,8 @@ class DataAcquisition:
             has to be specified when FROM_FLASHSCORE flag is set
         :keyword state: (str) has to be specified when FROM_FLASHSCORE flag is set
         :keyword league: (str) has to be specified when FROM_FLASHSCORE flag is set
+        :keyword keep_df: (bool) useful when parsing multiple years in row
+            has to be specified when FROM_FLASHSCORE flag is set
 
         :return: (pd.Dataframe) Acquired data
         """
@@ -98,7 +100,8 @@ class DataAcquisition:
             self._get_data_from_csv(fname)
         elif o_from & FROM_FLASHSCORE:
             url, year, state, league = check_input(['url', 'year', 'state', 'league'], **kwargs)
-            self._get_flashscore_data(url, year, state, league)
+            keep_df = kwargs.pop('keep_df') if 'keep_df' in kwargs else False
+            self._get_flashscore_data(url, year, state, league, keep_df)
         else:
             raise ValueError("Wrong Option flag o_from set")
 
@@ -112,16 +115,18 @@ class DataAcquisition:
         """ reference for simpler manipulation """
         safe_data_csv(df=self.df, fname=fname)
 
-    def _get_flashscore_data(self, url: str, year_league: str = "", state: str = "", league: str = ""):
+    def _get_flashscore_data(self, url: str, year_league: str = "",
+                             state: str = "", league: str = "", keep_df: bool = False):
         options = webdriver.ChromeOptions()
         options.add_argument("--headless")
         driver = Chrome(options=options)
         driver.implicitly_wait(5)
         driver.get(url)
         time.sleep(3) # give driver time to load the page
-        self.df = pd.DataFrame(
-            columns=["State", "League", "league_years", "DT", "Home", "Away", "Winner", "Home_points", "Away_points",
-                     "H_14", "A_14", "H_24", "A_24", "H_34", "A_34", "H_44", "A_44", "H_54", "A_54"])
+        if self.df is None or not keep_df:
+            self.df = pd.DataFrame(
+                columns=["State", "League", "league_years", "DT", "Home", "Away", "Winner", "Home_points", "Away_points",
+                         "H_14", "A_14", "H_24", "A_24", "H_34", "A_34", "H_44", "A_44", "H_54", "A_54"])
 
         while True:
             # load whole page
@@ -134,9 +139,10 @@ class DataAcquisition:
                 # no clickable element for loading more data on page found
                 break
 
+        len_df_before = len(self.df)
         matches = driver.find_elements(By.CLASS_NAME, "event__match.event__match--static.event__match--twoLine")
         last_month = -1
-        dt_year = int(year_league[5:])
+        dt_year = year_league[5:]
         for match in matches:
             # sats_page = f"https://www.flashscore.com/match/{}/#/match-summary/match-statistics/"
             match_text = match.text.split("\n")
@@ -153,16 +159,14 @@ class DataAcquisition:
 
             winner = "home" if h_all > a_all else "away" if a_all > h_all else "draw"
             index_space = date_str.index(' ')
-            date_str = date_str[:index_space] + date_str[index_space:]
-            dt = datetime.strptime(date_str, '%d.%m. %H:%M')
 
-            month = dt.month
+            month = int(date_str.split(" ")[0].split(".")[1])
             if last_month == 1 and month == 12:
-                dt_year = int(year_league[:4])
+                dt_year = year_league[:4]
 
             last_month = month
-
-            dt = dt.replace(year=dt_year)
+            date_str = date_str[:index_space] + dt_year + date_str[index_space:]
+            dt = datetime.strptime(date_str, '%d.%m.%Y %H:%M')
 
             row = [
                 state, league, year_league, dt, home, away, winner,
@@ -171,7 +175,8 @@ class DataAcquisition:
             row = row[:7] + list(map(int, row[7:]))
             self.df.loc[len(self.df.index)] = row
 
-        if len(self.df) > 0:
-            logger.info(f"Successfully parsed {len(self.df)} matches from {url}")
+        if len(self.df) > len_df_before:
+            logger.info(f"Successfully parsed {len(self.df) - len_df_before} matches from {url}"
+                        f"Dataframe currently contains {len(self.df)} rows")
         else:
             logger.info(f"Parsing matches from {url} was unsuccessful")

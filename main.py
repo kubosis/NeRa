@@ -12,23 +12,27 @@ def acquire_data(args):
     if args.from_csv:
         from_flag = FROM_CSV
         kwargs['fname'] = "basketball_other.csv"
+        da.get_data(from_flag, **kwargs)
     elif args.from_nba_stats:
         date_from: str = "01/01/1990"
         date_to: str = "01/20/1993"
         kwargs['date_from'] = date_from
         kwargs['date_to'] = date_to
         from_flag = FROM_NBA_STATS
+        da.get_data(from_flag, **kwargs)
     elif args.from_flashscore:
-        league_years = '2022-2023'
-        kwargs['url'] = f'https://www.flashscore.com/basketball/czech-republic/nbl-{league_years}/results/'
-        kwargs['year'] = league_years
-        kwargs['state'] = 'CZ'
-        kwargs['league'] = 'NBA'
-        from_flag = FROM_FLASHSCORE
+        for year in range(2024, 2012, -1):
+            league_years = str(year - 1) + "-" + str(year)
+            kwargs['url'] = f'https://www.flashscore.com/basketball/czech-republic/nbl-{league_years}/results/'
+            kwargs['year'] = league_years
+            kwargs['state'] = 'CZ'
+            kwargs['league'] = 'NBL'
+            kwargs['keep_df'] = True
+            from_flag = FROM_FLASHSCORE
+            da.get_data(from_flag, **kwargs)
     else:
         raise RuntimeError("set from where you want to get your data; run with -h for more info")
 
-    da.get_data(from_flag, **kwargs)
     if args.csv_store:
         da.safe_data_csv("other_leagues.csv")
     if args.database_store:
