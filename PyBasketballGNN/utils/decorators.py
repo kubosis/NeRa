@@ -7,7 +7,7 @@ from PyBasketballGNN.utils import check_input
 
 
 def time_debug(func: Callable):
-    """Decorator that reports the execution time."""
+    """ Decorator that reports the execution time for debugging """
 
     def wrap(*args, **kwargs):
         start = time.time()
@@ -21,7 +21,7 @@ def time_debug(func: Callable):
 
 
 def ssh_tunnel(fun):
-    """Decorator for managing ssh tunnel in function call
+    """ Decorator for creating and closing ssh tunnel, gives ssh_server to decorated function
 
     Mandatory keyword args:
        | ssh_host (str): host ssh server
@@ -40,8 +40,10 @@ def ssh_tunnel(fun):
         ssh_host, ssh_user, ssh_pkey = check_input(['ssh_host', 'ssh_user', 'ssh_pkey'], **kwargs)
 
         local_port: int = kwargs.pop('local_port') if 'local_port' in kwargs else 5432
-        remote_port: int = kwargs.pop('remote_port') if 'remote_port' in kwargs else 22
+        remote_port: int = kwargs.pop('remote_port') if 'remote_port' in kwargs else 12345
         local_address: str = kwargs.pop('local_address') if 'local_address' in kwargs else '127.0.0.1'
+
+        logger.info(f"Trying to establish connection with host {ssh_host} for user {ssh_user}")
 
         with SSHTunnelForwarder(
                 (ssh_host, remote_port),

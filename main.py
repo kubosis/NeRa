@@ -11,7 +11,7 @@ def acquire_data(args):
     kwargs = {}
     if args.from_csv:
         from_flag = FROM_CSV
-        kwargs['fname'] = "other_leagues.csv"
+        kwargs['fname'] = args.csv_fpath_from
         da.get_data(from_flag, **kwargs)
     elif args.from_nba_stats:
         date_from: str = "01/01/1990"
@@ -49,13 +49,13 @@ def acquire_data(args):
         da.safe_data_csv("other_leagues.csv")
     if args.database_store:
         check_input(["dbs_pwd"], **vars(args))
-        da.save_data_to_database(ssh_host="potato.felk.cvut.cz",
-                                 ssh_user="sukdojak",
-                                 ssh_pkey="~/.ssh/id_ed25519",
-                                 db_name="students",
-                                 table="basketball_other",
-                                 schema="basketball",
-                                 db_user="sukdojak",
+        da.save_data_to_database(ssh_host=args.ssh_host,
+                                 ssh_user=args.ssh_user,
+                                 ssh_pkey=args.ssh_pkey,
+                                 db_name=args.dbs_name,
+                                 table=args.dbs_table,
+                                 schema=args.dbs_schema,
+                                 db_user=args.dbs_user,
                                  db_pwd=args.dbs_pwd)
 
 
@@ -64,19 +64,44 @@ def parse_args():
     # data acquiring flags --------------------------------------------------------------------------
     parser.add_argument('-a', '--acquire-data', action='store_true',
                         help="Main program flow flag - enables program flow for data handling")
-    parser.add_argument('-db', '--database-store', action='store_true',
-                        help="Store acquired data on school database; no effect when -a not set")
-    parser.add_argument('-cs', '--csv-store', action='store_true',
-                        help="Store acquired data to csv file; no effect when -a not set")
     parser.add_argument('-fc', '--from-csv', action='store_true',
-                        help="Get data from csv file; no effect when -a not set")
+                        help="Get data from csv file, specify filepath in csv-fpath arg; no effect when -a not set")
+    parser.add_argument('--csv-fpath-from', type=str,
+                        help="Specify csv filepath; no effect when -a not set")
     parser.add_argument('-fn', '--from-nba-stats', action='store_true',
                         help="Get data from nba stats; no effect when -a not set")
+    parser.add_argument('-ff', '--from-flashscore', action='store_true',
+                        help="Get data from flashscore; no effect when -a not set")
+    parser.add_argument('-cs', '--csv-store', action='store_true',
+                        help="Store acquired data to csv file, specify fpath in csv-fpath-to; no effect when -a not set")
+    parser.add_argument('--csv-fpath-to', type=str,
+                        help="Specify csv filepath; no effect when -a not set")
+    parser.add_argument('-db', '--database-store', action='store_true',
+                        help="Store acquired data on school database; no effect when -a not set")
     parser.add_argument('-dbp', '--dbs-pwd', type=str,
                         help="Password for postgres database. "
                              "Has to be set when -db is set; no effect when -a not set")
-    parser.add_argument('-ff', '--from-flashscore', action='store_true',
-                        help="Get data from flashscore; no effect when -a not set")
+    parser.add_argument('-dbu', '--dbs-user', type=str,
+                        help="Database username "
+                             "Has to be set when -db is set; no effect when -a not set")
+    parser.add_argument('--dbs-name', type=str,
+                        help="Name of the database "
+                             "Has to be set when -db is set; no effect when -a not set")
+    parser.add_argument('--dbs-schema', type=str,
+                        help="Schema to witch you want to save data within database "
+                             "Has to be set when -db is set; no effect when -a not set")
+    parser.add_argument('--dbs-table', type=str,
+                        help="Table to witch you want to save data within database "
+                             "Has to be set when -db is set; no effect when -a not set")
+    parser.add_argument('--ssh-host', type=str,
+                        help="SSH host DNS or public IP. "
+                             "Has to be set when -db is set; no effect when -a not set")
+    parser.add_argument('--ssh-user', type=str,
+                        help="SSH username"
+                             "Has to be set when -db is set; no effect when -a not set")
+    parser.add_argument('--ssh-pkey', type=str,
+                        help="path to ssh private key"
+                             "Has to be set when -db is set; no effect when -a not set")
     args = parser.parse_args()
     return args
 

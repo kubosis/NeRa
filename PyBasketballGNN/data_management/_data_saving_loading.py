@@ -21,6 +21,7 @@ def save_to_pickle(fname: str, data):
     """
     with open(fname, "wb") as file:
         pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
+    logger.info(f"data saved to pickle {fname}")
 
 
 def load_from_pickle(fname: str):
@@ -29,8 +30,8 @@ def load_from_pickle(fname: str):
     """
     with open(fname, 'rb') as file:
         data = pickle.load(file)
+        logger.info(f"{fname} loaded from pickle")
         return data
-
 
 def save_json(df: pd.DataFrame | dict, fname: str = "data.json", fpath: str = PATH) -> None:
     if isinstance(df, dict):
@@ -40,12 +41,14 @@ def save_json(df: pd.DataFrame | dict, fname: str = "data.json", fpath: str = PA
 
     with open(fpath + fname, "w") as outfile:
         outfile.write(json_obj)
+    logger.info(f"df saved to json {fname}")
 
 
 def load_json(fname: str = "data.json", fpath: str = PATH) -> pd.DataFrame:
     with open(fpath + fname, 'r') as openfile:
         json_obj = json.load(openfile)
     df = pd.DataFrame.from_dict(json_obj, orient="index")
+    logger.info(f"data loaded from json {fname}")
     return df
 
 
@@ -62,6 +65,7 @@ def safe_data_csv(fname: str, df: pd.DataFrame, fpath: str = PATH) -> None:
 
 def load_data_csv(fname: str):
     df = pd.read_csv(fname)
+    logger.info(f"{len(df)} rows loaded from {fname}")
     return df
 
 
