@@ -19,7 +19,6 @@ import time
 from selenium import webdriver
 from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -159,7 +158,7 @@ class DataAcquisition:
 
             month = dt.month
             if last_month == 1 and month == 12:
-                dt_year = year_league[:4]
+                dt_year = int(year_league[:4])
 
             last_month = month
 

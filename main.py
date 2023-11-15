@@ -19,8 +19,9 @@ def acquire_data(args):
         kwargs['date_to'] = date_to
         from_flag = FROM_NBA_STATS
     elif args.from_flashscore:
-        kwargs['url'] = 'https://www.flashscore.com/basketball/czech-republic/nbl-2023-2024/results/'
-        kwargs['year'] = '2023-2024'
+        league_years = '2022-2023'
+        kwargs['url'] = f'https://www.flashscore.com/basketball/czech-republic/nbl-{league_years}/results/'
+        kwargs['year'] = league_years
         kwargs['state'] = 'CZ'
         kwargs['league'] = 'NBA'
         from_flag = FROM_FLASHSCORE
