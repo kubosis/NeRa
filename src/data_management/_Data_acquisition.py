@@ -9,6 +9,7 @@
 __all__ = ["DataAcquisition", "save_data_to_database"]
 
 import pandas as pd
+import requests_html as rq
 from sqlalchemy import create_engine
 from sshtunnel import SSHTunnelForwarder
 from loguru import logger
@@ -16,7 +17,8 @@ from nba_api.stats.endpoints import leaguegamefinder
 from typing import Optional
 
 from src.utils.wrappers import ssh_tunnel
-from src.data_management._macros import _PATH, FROM_CSV, FROM_NBA_STATS
+from src.utils import check_input
+from src.data_management._macros import *
 from src.data_management._data_saving_loading import *
 
 
@@ -51,7 +53,7 @@ def save_data_to_database(df: pd.DataFrame, db_name: str, table: str, schema: st
 
 
 class DataAcquisition:
-    def __init__(self, out_path: str = _PATH):
+    def __init__(self, out_path: str = PATH):
         self.fpath: str = out_path
         self.df: Optional[pd.DataFrame] = None
 
@@ -61,15 +63,32 @@ class DataAcquisition:
         games = game_finder.get_data_frames()[0]
         self.df = games
 
-    def _get_data_from_csv(self, fname, fpath):
-        self.df = load_data_csv(fname, fpath)
+    def _get_data_from_csv(self, fname: str):
+        self.df = load_data_csv(fname)
 
-    def get_nba_game_data(self, o_from: int, fname: str, fpath: str = _PATH,
-                          date_from: str = "01/01/1990", date_to: str = "01/01/2023") -> pd.DataFrame:
+    def get_data(self, o_from: int, **kwargs) -> pd.DataFrame:
+        """
+        acquire data from various sources
+        :param o_from: flags FROM_CSV, FROM_FLASHSCORE, FROM_NBA_STATS
+
+        :keyword date_from: (str) has to be specified when FROM_NBA_STATS flag is set
+        :keyword date_to: (str) has to be specified when FROM_NBA_STATS flag is set
+
+        :keyword fname: (str) has to be specified when FROM_CSV flag is set
+
+        :keyword link: (str) has to be specified when FROM_FLASHSCORE flag is set
+
+        :return: (pd.Dataframe) Acquired data
+        """
         if o_from & FROM_NBA_STATS:
+            date_from, date_to = check_input(['date_from', 'date_to'], **kwargs)
             self._data_nba_by_date(date_from, date_to)
         elif o_from & FROM_CSV:
-            self._get_data_from_csv(fname, fpath)
+            fname = check_input(['fname'], **kwargs)[0]
+            self._get_data_from_csv(fname)
+        elif o_from & FROM_FLASHSCORE:
+            link = check_input(['url'], **kwargs)[0]
+            self._get_flashscore_data(link)
         else:
             raise ValueError("Wrong Option flag o_from set")
 
@@ -82,3 +101,9 @@ class DataAcquisition:
     def safe_data_csv(self, fname: str):
         """ reference for simpler manipulation """
         safe_data_csv(df=self.df, fname=fname)
+
+    def _get_flashscore_data(self, url: str):
+        session = rq.HTMLSession()
+        r = session.get(url)
+        r.html.render()
+        ...

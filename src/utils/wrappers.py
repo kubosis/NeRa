@@ -37,11 +37,7 @@ def ssh_tunnel(fun):
     """
 
     def wrap(*args, **kwargs):
-        check_input(['ssh_host', 'ssh_user', 'ssh_pkey'], **kwargs)
-
-        ssh_host: str = kwargs.pop('ssh_host')
-        ssh_user: str = kwargs.pop('ssh_user')
-        ssh_pkey: str = kwargs.pop('ssh_pkey')
+        ssh_host, ssh_user, ssh_pkey = check_input(['ssh_host', 'ssh_user', 'ssh_pkey'], **kwargs)
 
         local_port: int = kwargs.pop('local_port') if 'local_port' in kwargs else 5432
         remote_port: int = kwargs.pop('remote_port') if 'remote_port' in kwargs else 22
