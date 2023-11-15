@@ -11,7 +11,7 @@ def acquire_data(args):
     kwargs = {}
     if args.from_csv:
         from_flag = FROM_CSV
-        kwargs['fname'] = "nba.csv"
+        kwargs['fname'] = "basketball_other.csv"
     elif args.from_nba_stats:
         date_from: str = "01/01/1990"
         date_to: str = "01/20/1993"
@@ -19,14 +19,17 @@ def acquire_data(args):
         kwargs['date_to'] = date_to
         from_flag = FROM_NBA_STATS
     elif args.from_flashscore:
-        kwargs['url'] = 'https://www.flashscore.com/basketball/czech-republic/nbl/results/'
+        kwargs['url'] = 'https://www.flashscore.com/basketball/czech-republic/nbl-2023-2024/results/'
+        kwargs['year'] = '2023-2024'
+        kwargs['state'] = 'CZ'
+        kwargs['league'] = 'NBA'
         from_flag = FROM_FLASHSCORE
     else:
         raise RuntimeError("set from where you want to get your data; run with -h for more info")
 
     da.get_data(from_flag, **kwargs)
     if args.csv_store:
-        da.safe_data_csv("nba.csv")
+        da.safe_data_csv("other_leagues.csv")
     if args.database_store:
         check_input(["dbs_pwd"], **vars(args))
         da.save_data_to_database(ssh_host="potato.felk.cvut.cz",

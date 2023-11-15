@@ -3,6 +3,8 @@ import pandas as pd
 import pickle
 from pathlib import Path
 
+from loguru import logger
+
 from src.data_management._macros import PATH
 
 __all__ = ["save_to_pickle", "load_from_pickle", "save_json", "load_json",
@@ -51,6 +53,7 @@ def safe_data_csv(fname: str, df: pd.DataFrame, fpath: str = PATH) -> None:
         df.to_csv(filepath, index=False)
     else:
         df.to_csv(filepath, index=False, mode='a', header=False)
+    logger.info(f"Saved {len(df)} rows to {filepath}")
 
 
 def load_data_csv(fname: str):
