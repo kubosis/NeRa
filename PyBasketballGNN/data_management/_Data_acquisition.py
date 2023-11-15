@@ -22,10 +22,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from PySportGNN.utils.wrappers import ssh_tunnel
-from PySportGNN.utils import check_input
-from PySportGNN.data_management._macros import *
-from PySportGNN.data_management._data_saving_loading import *
+from PyBasketballGNN.utils.wrappers import ssh_tunnel
+from PyBasketballGNN.utils import check_input
+from PyBasketballGNN.data_management._macros import *
+from PyBasketballGNN.data_management._data_saving_loading import *
 
 
 @ssh_tunnel
@@ -123,6 +123,7 @@ class DataAcquisition:
         driver.implicitly_wait(5)
         driver.get(url)
         time.sleep(3) # give driver time to load the page
+        logger.info(f"Parsing from {url}")
         if self.df is None or not keep_df:
             self.df = pd.DataFrame(
                 columns=["State", "League", "league_years", "DT", "Home", "Away", "Winner", "Home_points", "Away_points",
@@ -154,7 +155,7 @@ class DataAcquisition:
             elif len(match_text) == 15:
                 date_str, home, away, h_all, a_all, h14, a14, h24, a24, h34, a34, h44, a44, h54, a54 = match_text
             else:
-                logger.error(f"Unknown type of div element parsed, skipping.\nmatch_text = {match_text}")
+                logger.warning(f"Unknown type of div element parsed, skipping.\nmatch_text = {match_text}")
                 continue
 
             winner = "home" if h_all > a_all else "away" if a_all > h_all else "draw"
@@ -176,7 +177,7 @@ class DataAcquisition:
             self.df.loc[len(self.df.index)] = row
 
         if len(self.df) > len_df_before:
-            logger.info(f"Successfully parsed {len(self.df) - len_df_before} matches from {url}"
-                        f"Dataframe currently contains {len(self.df)} rows")
+            logger.success(f"Successfully parsed {len(self.df) - len_df_before} matches from {url}")
+            logger.info(f"Dataframe currently contains {len(self.df)} rows")
         else:
-            logger.info(f"Parsing matches from {url} was unsuccessful")
+            logger.error(f"Parsing matches from {url} was unsuccessful")

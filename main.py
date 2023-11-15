@@ -1,8 +1,8 @@
 import argparse
 import sys
 
-from PySportGNN.data_management import *
-from PySportGNN.utils import check_input
+from PyBasketballGNN.data_management import *
+from PyBasketballGNN.utils import check_input
 
 
 def acquire_data(args):
@@ -21,13 +21,25 @@ def acquire_data(args):
         from_flag = FROM_NBA_STATS
         da.get_data(from_flag, **kwargs)
     elif args.from_flashscore:
-        for year in range(2024, 2012, -1):
+        country = 'europe'
+        league = 'EuroCup'
+
+        # actual data
+        league_years = "2023-2024"
+        kwargs['url'] = f'https://www.flashscore.com/basketball/{country}/{league.lower()}/results/'
+        kwargs['year'] = league_years
+        kwargs['state'] = 'EU'
+        kwargs['league'] = league
+        kwargs['keep_df'] = True
+        from_flag = FROM_FLASHSCORE
+        da.get_data(from_flag, **kwargs)
+
+        # archived data
+        for year in range(2023, 2012, -1):
             league_years = str(year - 1) + "-" + str(year)
-            kwargs['url'] = f'https://www.flashscore.com/basketball/czech-republic/nbl-{league_years}/results/'
+            kwargs['url'] = f'https://www.flashscore.com/basketball/{country}/{league.lower()}-{league_years}/results/'
             kwargs['year'] = league_years
-            kwargs['state'] = 'CZ'
-            kwargs['league'] = 'NBL'
-            kwargs['keep_df'] = True
+            kwargs['league'] = league
             from_flag = FROM_FLASHSCORE
             da.get_data(from_flag, **kwargs)
     else:

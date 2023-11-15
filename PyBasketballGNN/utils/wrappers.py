@@ -3,7 +3,7 @@ import time
 from typing import Callable
 from sshtunnel import SSHTunnelForwarder
 
-from PySportGNN.utils import check_input
+from PyBasketballGNN.utils import check_input
 
 
 def time_debug(func: Callable):
