@@ -6,11 +6,12 @@ from pathlib import Path
 from loguru import logger
 from sqlalchemy import create_engine
 from sshtunnel import SSHTunnelForwarder
+import socket
 
 from PyBasketballGNN.data_management._macros import PATH
 
 __all__ = ["save_to_pickle", "load_from_pickle", "save_json", "load_json",
-           "safe_data_csv", "load_data_csv", "ssh_save_data_to_database"]
+           "safe_data_csv", "load_data_csv", "ssh_save_data_to_postgres"]
 
 from PyBasketballGNN.utils.decorators import ssh_tunnel
 
@@ -32,6 +33,7 @@ def load_from_pickle(fname: str):
         data = pickle.load(file)
         logger.info(f"{fname} loaded from pickle")
         return data
+
 
 def save_json(df: pd.DataFrame | dict, fname: str = "data.json", fpath: str = PATH) -> None:
     if isinstance(df, dict):
@@ -70,7 +72,7 @@ def load_data_csv(fname: str):
 
 
 @ssh_tunnel
-def ssh_save_data_to_database(df: pd.DataFrame, db_name: str, table: str, schema: str,
+def ssh_save_data_to_postgres(df: pd.DataFrame, db_name: str, table: str, schema: str,
                               db_user: str, db_pwd: str, ssh_server: SSHTunnelForwarder) -> None:
     """
     Connect  to postgres database via SSH tunnelling and create table from df
@@ -90,9 +92,12 @@ def ssh_save_data_to_database(df: pd.DataFrame, db_name: str, table: str, schema
         raise ValueError("Cannot push NoneType dataframe")
 
     # connect to PostgreSQL
-    local_port = str(ssh_server.local_bind_port)
-    connect_string = f'postgresql://{db_user}:{db_pwd}@localhost:{local_port}/{db_name}'
-    engine = create_engine(connect_string)
+    local_port = 5432  #  str(ssh_server.local_bind_port)
+    host = 'localhost'
+    connect_string = f'postgresql://{db_user}:{db_pwd}@{host}:{local_port}/{db_name}'
+    engine = create_engine(connect_string,
+                           pool_pre_ping=True,
+                           )
     logger.info(f"Postgres engine created for {connect_string}")
 
     df.to_sql(table, engine, schema=schema)

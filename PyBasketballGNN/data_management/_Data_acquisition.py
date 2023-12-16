@@ -20,7 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from PyBasketballGNN.utils import check_input
+from PyBasketballGNN.utils import process_kwargs
 from PyBasketballGNN.data_management._macros import *
 from PyBasketballGNN.data_management._data_saving_loading import *
 
@@ -50,7 +50,7 @@ class DataAcquisition:
         :keyword fname: (str) has to be specified when FROM_CSV flag is set
 
         :keyword url: (str) has to be specified when FROM_FLASHSCORE flag is set
-        :keyword year: (str) "yyyy-yyyy" (league year from, to)
+        :keyword year: (str) "yyyy-yyyy" (league year from, to=from + 1)
             has to be specified when FROM_FLASHSCORE flag is set
         :keyword state: (str) has to be specified when FROM_FLASHSCORE flag is set
         :keyword league: (str) has to be specified when FROM_FLASHSCORE flag is set
@@ -60,13 +60,13 @@ class DataAcquisition:
         :return: (pd.Dataframe) Acquired data
         """
         if o_from & FROM_NBA_STATS:
-            date_from, date_to = check_input(['date_from', 'date_to'], **kwargs)
+            date_from, date_to, _ = process_kwargs(['date_from', 'date_to'], **kwargs)
             self._data_nba_by_date(date_from, date_to)
         elif o_from & FROM_CSV:
-            fname = check_input(['fname'], **kwargs)[0]
+            fname, _ = process_kwargs(['fname'], **kwargs)
             self._get_data_from_csv(fname)
         elif o_from & FROM_FLASHSCORE:
-            url, year, state, league = check_input(['url', 'year', 'state', 'league'], **kwargs)
+            url, year, state, league, _ = process_kwargs(['url', 'year', 'state', 'league'], **kwargs)
             keep_df = kwargs.pop('keep_df') if 'keep_df' in kwargs else False
             self._get_flashscore_data(url, year, state, league, keep_df)
         else:
@@ -76,7 +76,7 @@ class DataAcquisition:
 
     def save_data_to_database(self, *args, **kwargs):
         """ reference for simpler manipulation (for details see ssh_save_data_to_database doc) """
-        ssh_save_data_to_database(*args, df=self.df, **kwargs)
+        ssh_save_data_to_postgres(*args, df=self.df, **kwargs)
 
     def safe_data_csv(self, fname: str):
         """ reference for simpler manipulation """

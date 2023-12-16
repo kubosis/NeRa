@@ -2,7 +2,7 @@ import argparse
 import sys
 
 from PyBasketballGNN.data_management import *
-from PyBasketballGNN.utils import check_input
+from PyBasketballGNN.utils import process_kwargs
 
 
 def acquire_data(args):
@@ -48,7 +48,7 @@ def acquire_data(args):
     if args.csv_store:
         da.safe_data_csv("other_leagues.csv")
     if args.database_store:
-        check_input(["dbs_pwd"], **vars(args))
+        process_kwargs(["dbs_pwd"], **vars(args))
         da.save_data_to_database(ssh_host=args.ssh_host,
                                  ssh_user=args.ssh_user,
                                  ssh_pkey=args.ssh_pkey,
