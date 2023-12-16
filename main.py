@@ -1,8 +1,8 @@
 import argparse
 import sys
 
-from PyBasketballGNN.data_management import *
-from PyBasketballGNN.utils import process_kwargs
+from PyPredict.data_management import *
+from PyPredict.utils import process_kwargs
 
 
 def acquire_data(args):

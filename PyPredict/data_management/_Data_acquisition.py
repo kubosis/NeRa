@@ -20,9 +20,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from PyBasketballGNN.utils import process_kwargs
-from PyBasketballGNN.data_management._macros import *
-from PyBasketballGNN.data_management._data_saving_loading import *
+from PyPredict.utils import process_kwargs
+from PyPredict.data_management._macros import *
+from PyPredict.data_management._data_saving_loading import *
 
 
 class DataAcquisition:

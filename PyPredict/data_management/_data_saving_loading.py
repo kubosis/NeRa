@@ -8,12 +8,12 @@ from sqlalchemy import create_engine
 from sshtunnel import SSHTunnelForwarder
 import socket
 
-from PyBasketballGNN.data_management._macros import PATH
+from PyPredict.data_management._macros import PATH
 
 __all__ = ["save_to_pickle", "load_from_pickle", "save_json", "load_json",
            "safe_data_csv", "load_data_csv", "ssh_save_data_to_postgres"]
 
-from PyBasketballGNN.utils.decorators import ssh_tunnel
+from PyPredict.utils.decorators import ssh_tunnel
 
 
 def save_to_pickle(fname: str, data):
