@@ -1,9 +1,18 @@
 import torch
-from torch.nn import LogSoftmax, ReLU, Tanh, LeakyReLU, ModuleList, Dropout
-from torch_geometric.nn import GCNConv, GraphConv, ChebConv
-
-from ._model import GeneralGNNModel
+import torch.nn.functional as F
+from torch_geometric_temporal.nn.recurrent import DCRNN
 
 
-class GNNModel(GeneralGNNModel):
-    ...
+class RecurrentGCN(torch.nn.Module):
+    def __init__(self, node_features, filters):
+        super(RecurrentGCN, self).__init__()
+        self.recurrent = DCRNN(node_features, filters, 1)
+        self.linear = torch.nn.Linear(filters, 1)
+
+    def forward(self, x, edge_index, edge_weight):
+        h = self.recurrent(x, edge_index, edge_weight)
+        h = F.relu(h)
+        h = F.dropout(h, training=self.training)
+        h = self.linear(h)
+        return h
+

@@ -26,12 +26,13 @@ class GeneralModel(ABC):
         """
 
 
-class GeneralGNNModel(GeneralModel, ABC, torch.nn.Module):
-    def __init__(self, df: pd.DataFrame, num_teams, *args, embed_dim=10,
+class GeneralGNNModel(ABC, torch.nn.Module):
+    def __init__(self, num_teams, *args, embed_dim=10,
                  n_conv=3, conv_dims=(32, 32, 32, 16), n_dense=5, dense_dims=(8, 8, 8, 8, 8),
                  activ_fn='leaky', target_dim=3, log_softmax_dim=1, dropout=0.1, **kwargs):
         torch.nn.Module.__init__(self, *args, **kwargs)
-        GeneralModel.__init__(self, df, num_teams)
+
+        self.num_teams = num_teams
 
         # model hyper params
         self.embed_dim = embed_dim

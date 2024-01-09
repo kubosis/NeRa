@@ -1,5 +1,5 @@
 """
-    Name: _Data_acquisition.py
+    Name: data_acquisition.py
     Author: Jakub Sukdol
     Date: 25.10.23
 
@@ -21,8 +21,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from PyPredict.utils import process_kwargs
-from PyPredict.data_management._macros import *
-from PyPredict.data_management._data_saving_loading import *
+from ._macros import *
+from ._data_saving_loading import *
 
 
 class DataAcquisition:
