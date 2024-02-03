@@ -89,11 +89,12 @@ class DataAcquisition:
         driver = Chrome(options=options)
         driver.implicitly_wait(5)
         driver.get(url)
-        time.sleep(3) # give driver time to load the page
+        time.sleep(3)  # give driver time to load the page
         logger.info(f"Parsing from {url}")
         if self.df is None or not keep_df:
             self.df = pd.DataFrame(
-                columns=["State", "League", "league_years", "DT", "Home", "Away", "Winner", "Home_points", "Away_points",
+                columns=["State", "League", "league_years", "DT", "Home", "Away", "Winner", "Home_points",
+                         "Away_points",
                          "H_14", "A_14", "H_24", "A_24", "H_34", "A_34", "H_44", "A_44", "H_54", "A_54"])
 
         while True:
@@ -101,7 +102,7 @@ class DataAcquisition:
             try:
                 more = driver.find_element(By.CLASS_NAME, "event__more.event__more--static")
                 driver.execute_script("arguments[0].scrollIntoView();arguments[1].click();",
-                    more, WebDriverWait(driver, 20).until(EC.element_to_be_clickable(more)))
+                                      more, WebDriverWait(driver, 20).until(EC.element_to_be_clickable(more)))
                 time.sleep(3)  # give driver time to load the page
             except:
                 # no clickable element for loading more data on page found
