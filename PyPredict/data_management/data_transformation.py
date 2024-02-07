@@ -3,6 +3,7 @@ import numpy as np
 from loguru import logger
 from datetime import datetime, timedelta
 from torch_geometric_temporal.signal import DynamicGraphTemporalSignal
+import torch
 
 
 def normalize_array(array: np.ndarray) -> np.ndarray:
@@ -110,11 +111,11 @@ class DataTransformation:
 
                 features_i = np.stack([home_wins_norm, home_draws_norm, home_losses_norm,
                                        away_wins_norm, away_draws_norm, away_losses_norm]).transpose()
-                node_features.append(features_i)
+                node_features.append(features_i.astype(float))
             else:
                 features_i = np.stack([home_wins_norm, home_losses_norm,
                                        away_wins_norm, away_losses_norm]).transpose()
-                node_features.append(features_i)
+                node_features.append(features_i.astype(float))
 
             if verbose:
                 logger.info(
@@ -125,7 +126,8 @@ class DataTransformation:
 
         return node_features
 
-    def _extract_dynamic_edges_and_labels(self) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
+    def _extract_dynamic_edges_and_labels(self, one_hot: bool)\
+            -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
         """ extract dynamically changing edges and their features """
         delta = self.delta
         start_date = self.start_date
@@ -140,13 +142,14 @@ class DataTransformation:
         while start_date <= end_date:
             df_i = self.df[((start_date + delta >= self.df['DT']) & (start_date <= self.df['DT']))]
 
-            edges.append(df_i.loc[:, ['Home', 'Away']].to_numpy().T)
+            edges.append(df_i.loc[:, ['Home', 'Away']].to_numpy().astype(int).T)
 
-            match_outcomes = df_i.loc[:, ['Winner']].values
-            match_outcomes = np.apply_along_axis(lambda x: one_hot_encode(x[0], 3), 1, match_outcomes)
+            match_outcomes = df_i.loc[:, ['Winner']].values.astype(int)
+            if one_hot:
+                match_outcomes = np.apply_along_axis(lambda x: one_hot_encode(x[0], 3), 1, match_outcomes)
+            else:
+                match_outcomes = normalize_array(match_outcomes)
             edge_features.append(match_outcomes)
-
-            teams_by_leagues = df_i.groupby('League')
 
             team_points = np.zeros((self.num_teams,))
             team_ranks = np.zeros((self.num_teams,))
@@ -158,27 +161,29 @@ class DataTransformation:
                 league_df = self.df.loc[self.df['League'] == league]
                 teams_ids = pd.concat([league_df['Home'], league_df['Away']], axis=0).unique()
                 league_teams_score = team_points[teams_ids]
-                teams_sorted = np.argsort(league_teams_score.astype(int))
+                teams_sorted = np.argsort(league_teams_score)
                 teams_sorted = np.max(teams_sorted) - teams_sorted
                 team_ranks[teams_ids] += teams_sorted
                 team_ranks[teams_ids] = normalize_array(team_ranks[teams_ids])
-            labels.append(team_ranks)
+            labels.append(team_ranks.astype(float))
 
             start_date += delta
 
         return edges, edge_features, labels
 
-    def get_dataset(self, node_f_extract: bool, node_f_discount: float = 0.75, node_f_draws: bool = False,
-                  verbose: bool = False) -> DynamicGraphTemporalSignal:
+    def get_dataset(self, node_f_extract: bool = False, node_f_discount: float = 0.75, node_f_draws: bool = False,
+                    edge_f_one_hot: bool = False, verbose: bool = False) -> DynamicGraphTemporalSignal:
         """ transform dataframe into dataset used by PyTorch Geometric
             after transformation, mapping of the teams to unique ids is saved to self.mapping
             the transformation is destructive for the original dataframe
 
             :param node_f_extract: (bool) extract features from nodes
+            :param node_f_discount: (float) discount factor for node features
+            :param node_f_draws: (bool) use draws in features
+            :param edge_f_one_hot: (bool) encode edge match outcomes using one-hot encoding
+            :param verbose: (bool) print log to console
 
-            :keyword node_f_discount: (float) discount factor for node features
-            :keyword node_f_draws: (bool) use draws in features
-            :keyword verbose: (bool) print log to console
+            :return: (StaticGraphTemporalSignal)
         """
 
         # 1) map teams to unique ids
@@ -187,22 +192,21 @@ class DataTransformation:
         # 2) map match outcomes to integers (win home = 0; win away = 2; draw = 1)
         self._map_match_outcomes(verbose)
 
-        # 3) extract node features (optional)
+        # 3) extract node features (optional, may not be used at all)
         if node_f_extract:
             node_features = self._extract_node_features(node_f_discount, node_f_draws, verbose)
         else:
             node_features = [None for _ in range(self.snapshot_count)]
 
         # 4) extract edges and edge features
-        edges, edge_features, labels = self._extract_dynamic_edges_and_labels()
+        edges, edge_features, labels = self._extract_dynamic_edges_and_labels(edge_f_one_hot)
 
         # 5) create PyTorch Geometric Temporal dataset
         dynamic_graph = DynamicGraphTemporalSignal(
-            node_features=node_features,
             edge_indices=edges,
             edge_weights=edge_features,
             features=node_features,
-            targets=labels
+            targets=labels,
         )
 
         return dynamic_graph
