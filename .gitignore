@@ -6,5 +6,3 @@ __pycache__/
 run_conf.txt
 
 resources/.~lock.*.csv#
-
-*.ipynb
