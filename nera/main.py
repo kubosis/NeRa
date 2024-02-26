@@ -1,8 +1,8 @@
 import argparse
 import sys
 
-from PyPredict.data_management import *
-from PyPredict.utils import process_kwargs
+from .data_management import *
+from .utils import process_kwargs
 
 
 def acquire_data(args):

@@ -3,7 +3,7 @@ import time
 from typing import Callable
 from sshtunnel import SSHTunnelForwarder
 
-from PyPredict.utils import process_kwargs
+from nera.utils import process_kwargs
 
 
 def time_debug(func: Callable):

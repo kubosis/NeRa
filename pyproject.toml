@@ -2,26 +2,26 @@
 requires = ["setuptools>=68", "wheel"]
 
 build-backend = "setuptools.build_meta"
-[tool.setuptools]
-packages = ["PyPredict"]
+[tool.setuptools.packages]
+find = {}
 
 [project]
-name = "PySportGNN"
+name = "nera"
 version = "0.0.1"
-description = "Package for basketball prediction with GNNs"
+description = "NERA - graph NEural network RAting package"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {file = "LICENSE.txt"}
-keywords = ["GNN", "Sport prediction"]
+license = {file = "LICENSE"}
+keywords = ["GNN", "Sport prediction", "Rating"]
 dynamic = ["dependencies"]
 authors = [
     {name = "Jakub Sukdol", email = "sukdojak@fel.cvut.cz"},
 ]
 
 classifiers = [
-    "Development Status ::  1 - Alfa",
+    "Development Status ::  1 - Alpha",
     "Programming Language :: Python",
-    "Operating System :: Microsoft Windows, Linux"
+    "Operating System :: Linux"
 ]
 
 [tool.setuptools.dynamic]
