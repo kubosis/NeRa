@@ -58,13 +58,8 @@ class EloGrad(EloModel):
         :keyword d: (1, torch.Tensor, float64) rating meta parameter, default value = 500.
         :keyword k: (float) learning rate, default value = 2.
         """
-        super(EloGrad, self).__init__(team_count, **kwargs)
-        if cd_grad is False:
-            self.c = self.c.detach()
-            self.d = self.d.detach()
+        super(EloGrad, self).__init__(team_count, cd_grad=cd_grad, **kwargs)
 
     def forward(self, matches: Matches):
         self.home, self.away = matches
-        home_rating = self.rating[self.home]
-        away_rating = self.rating[self.away]
-        return elo_function(home_rating, away_rating, self.c, self.d)
+        return elo_function(self.rating[self.home], self.rating[self.away], self.c, self.d)

@@ -17,7 +17,7 @@ Index = int
 
 
 class EloModel(nn.Module):
-    def __init__(self, team_count: int, default: int = 1000, **kwargs):
+    def __init__(self, team_count: int, default: float = 1000., **kwargs):
         """
         :param team_count: number of teams
         :param default: default rating of all teams
@@ -36,6 +36,17 @@ class EloModel(nn.Module):
 
         assert (isinstance(self.c, torch.Tensor) and isinstance(self.d, torch.Tensor))
 
-        self.rating = np.zeros((team_count,)) + default
+        self.c = self.c.detach()
+        self.d = self.d.detach()
+
+        if 'cd_grad' in kwargs:
+            cd_grad = kwargs['cd_grad']
+            if cd_grad:
+                self.c.requires_grad = True
+                self.d.requires_grad = True
+                self.c = nn.Parameter(self.c)
+                self.d = nn.Parameter(self.d)
+
+        self.rating = nn.Parameter(torch.full((team_count,), default, dtype=torch.float64))
         self.E_H = None
         self.home, self.away = None, None
