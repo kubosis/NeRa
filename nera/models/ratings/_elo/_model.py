@@ -34,19 +34,25 @@ class EloModel(nn.Module):
             else:
                 setattr(self, elem, EloModel._elo_params[elem])
 
-        assert (isinstance(self.c, torch.Tensor) and isinstance(self.d, torch.Tensor))
-
-        self.c = self.c.detach()
-        self.d = self.d.detach()
-
+        self.cd_grad = False
         if 'cd_grad' in kwargs:
-            cd_grad = kwargs['cd_grad']
-            if cd_grad:
-                self.c.requires_grad = True
-                self.d.requires_grad = True
-                self.c = nn.Parameter(self.c)
-                self.d = nn.Parameter(self.d)
+            self.cd_grad = kwargs['cd_grad']
+
+        if not isinstance(self.c, torch.Tensor):
+            self.c = torch.tensor(self.c, dtype=torch.float64)
+        if not isinstance(self.d, torch.Tensor):
+            self.d = torch.tensor(self.d, dtype=torch.float64)
+
+        if self.cd_grad:
+            self.c.requires_grad = True
+            self.d.requires_grad = True
+            self.c = nn.Parameter(self.c)
+            self.d = nn.Parameter(self.d)
+        else:
+            self.c = self.c.detach()
+            self.d = self.d.detach()
 
         self.rating = nn.Parameter(torch.full((team_count,), default, dtype=torch.float64))
+
         self.E_H = None
         self.home, self.away = None, None
