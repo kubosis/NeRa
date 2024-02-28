@@ -7,7 +7,7 @@ from loguru import logger
 import torch
 from torch_geometric_temporal.signal import temporal_signal_split, DynamicGraphTemporalSignal
 
-from .data_management import DataTransformation
+from .data import DataTransformation
 
 
 class Trainer:

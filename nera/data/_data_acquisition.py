@@ -1,5 +1,5 @@
 """
-    Name: data_acquisition.py
+    Name: _data_acquisition.py
     Author: Jakub Sukdol
     Date: 25.10.23
 

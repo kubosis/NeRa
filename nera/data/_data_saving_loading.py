@@ -8,12 +8,12 @@ from sqlalchemy import create_engine
 from sshtunnel import SSHTunnelForwarder
 import socket
 
-from nera.data_management._macros import PATH
+from nera.data._macros import PATH
 
 __all__ = ["save_to_pickle", "load_from_pickle", "save_json", "load_json",
            "safe_data_csv", "load_data_csv", "ssh_save_data_to_postgres"]
 
-from nera.utils.decorators import ssh_tunnel
+from nera.utils import ssh_tunnel
 
 
 def save_to_pickle(fname: str, data):

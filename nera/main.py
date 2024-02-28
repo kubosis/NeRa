@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from .data_management import *
+from .data import *
 from .utils import process_kwargs
 
 
