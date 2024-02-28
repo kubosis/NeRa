@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+NERA - Neural Ratings Analysis
+
+simple file for executing nera directly via command line
+"""
+
 import argparse
 import sys
 
