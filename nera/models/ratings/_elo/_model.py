@@ -4,11 +4,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from .._general_rating import GeneralRating
-
-Matches = Sequence[np.ndarray]
-Result = Sequence[np.ndarray]
-Index = int
+from .._general_rating import *
 
 
 class EloModel(GeneralRating):

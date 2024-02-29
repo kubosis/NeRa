@@ -19,11 +19,11 @@ class EloManual(EloModel):
         super(EloManual, self).__init__(team_count, **kwargs)
 
     def forward(self, matches: Matches):
-        with torch.no_grad():
-            self.home, self.away = matches
-            home_rating = self.rating[self.home]
-            away_rating = self.rating[self.away]
+        self.home, self.away = matches
+        home_rating = self.rating[self.home]
+        away_rating = self.rating[self.away]
 
+        with torch.no_grad():
             self.E_H = 1 / (1 + torch.pow(self.c, ((away_rating - home_rating) / self.d)))
 
         return self.E_H

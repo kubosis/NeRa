@@ -1,5 +1,12 @@
+from typing import Sequence
+
 import torch.nn as nn
 import torch
+import numpy as np
+
+Matches = Sequence[np.ndarray]
+Result = Sequence[np.ndarray]
+Index = int
 
 
 class GeneralRating(nn.Module):
