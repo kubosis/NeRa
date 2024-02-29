@@ -12,8 +12,8 @@ class EloManual(EloModel):
         :param team_count: (int) number of teams
         :keyword default: (float) default rating of all teams, default value = 1000.
         :keyword gamma: (float) impact scale of goal difference, default value = 2.
-        :keyword c: (1, torch.Tensor, float64) rating meta parameter, default value = 3.
-        :keyword d: (1, torch.Tensor, float64) rating meta parameter, default value = 500.
+        :keyword c: (float) rating meta parameter, default value = 3.
+        :keyword d: (float) rating meta parameter, default value = 500.
         :keyword k: (float) learning rate, default value = 2.
         """
         super(EloManual, self).__init__(team_count, **kwargs)
