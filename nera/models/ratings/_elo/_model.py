@@ -10,7 +10,7 @@ Index = int
 
 
 class EloModel(nn.Module):
-    _elo_params = {
+    _params = {
         'k': torch.tensor(3., dtype=torch.float64),
         'gamma': torch.tensor(2., dtype=torch.float64),
         'c': torch.tensor(3., dtype=torch.float64),
@@ -28,11 +28,11 @@ class EloModel(nn.Module):
         """
 
         super(EloModel, self).__init__()
-        for elem in EloModel._elo_params:
+        for elem in self._elo_params:
             if elem in kwargs:
                 setattr(self, elem, kwargs[elem])
             else:
-                setattr(self, elem, EloModel._elo_params[elem])
+                setattr(self, elem, self._params[elem])
 
         self.cd_grad = False
         if 'cd_grad' in kwargs:
