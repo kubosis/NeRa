@@ -4,12 +4,14 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+from .._general_model import GeneralRating
+
 Matches = Sequence[np.ndarray]
 Result = Sequence[np.ndarray]
 Index = int
 
 
-class EloModel(nn.Module):
+class EloModel(GeneralRating):
     _params = {
         'k': torch.tensor(3., dtype=torch.float64),
         'gamma': torch.tensor(2., dtype=torch.float64),
@@ -27,12 +29,7 @@ class EloModel(nn.Module):
         :keyword k: learning rate
         """
 
-        super(EloModel, self).__init__()
-        for elem in self._elo_params:
-            if elem in kwargs:
-                setattr(self, elem, kwargs[elem])
-            else:
-                setattr(self, elem, self._params[elem])
+        super(EloModel, self).__init__(self._params, **kwargs)
 
         self.cd_grad = False
         if 'cd_grad' in kwargs:
@@ -55,4 +52,4 @@ class EloModel(nn.Module):
         self.rating = nn.Parameter(torch.full((team_count,), default, dtype=torch.float64))
 
         self.E_H = None
-        self.home, self.away = None, None
+
