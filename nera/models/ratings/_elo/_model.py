@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from .._general_model import GeneralRating
+from .._general_rating import GeneralRating
 
 Matches = Sequence[np.ndarray]
 Result = Sequence[np.ndarray]

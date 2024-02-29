@@ -7,8 +7,8 @@ class GeneralRating(nn.Module):
         super(GeneralRating, self).__init__()
 
         self.hp_grad = False  # compute gradient of hyper params?
-        if 'hp_grad' in params:
-            self.hp_grad = params['hp_grad']
+        if 'hp_grad' in kwargs:
+            self.hp_grad = kwargs['hp_grad']
 
         for elem in params.keys():
             if elem in kwargs:
