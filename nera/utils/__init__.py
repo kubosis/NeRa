@@ -1,3 +1,3 @@
-from nera.utils._utils import *
+from ._utils import *
 from ._decorators import *
 

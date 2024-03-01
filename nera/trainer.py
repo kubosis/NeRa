@@ -1,42 +1,90 @@
-from typing import Union
-from datetime import timedelta
-
-import numpy as np
-import pandas as pd
-from loguru import logger
 import torch
+import torch.nn as nn
 from torch_geometric_temporal.signal import temporal_signal_split, DynamicGraphTemporalSignal
+import numpy as np
+from loguru import logger
 
-from .data import DataTransformation
+from .models.loss import WeightedMSELoss
 
 
 class Trainer:
-    def __init__(self, dataset: Union[DynamicGraphTemporalSignal, pd.DataFrame],
-                 model: torch.nn.Module, lr: float = .001,
-                 train_ratio: float = 0.2, **kwargs):
-        if isinstance(dataset, DynamicGraphTemporalSignal):
-            self.dataset = dataset
-            self.loader = None
-        else:
-            time_delta = kwargs.pop('timedelta', timedelta(days=365))
-            self.loader = DataTransformation(df=dataset, snapshot_duration=time_delta)
-            self.dataset = self.loader.get_dataset(**kwargs)
+    """
+    Basic training class for predefined models
+    """
 
-        (self.train_dataset,
-         self.test_dataset) = temporal_signal_split(dataset, train_ratio=train_ratio)
+    def __init__(self, dataset: DynamicGraphTemporalSignal, model: nn.Module,
+                 lr: float = .001, lr_rating: float = 3., loss_fn=WeightedMSELoss, train_ratio: float = 0.8, **kwargs):
 
+        self.train_dataset, self.test_dataset = None, None
+        self.train_ratio = train_ratio
+        self.dataset = dataset
+
+        self.lr = lr
+        self.lr_rating = lr_rating
+        self.optim = None
         self.model = model
-        self.optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-        self.loss_fn = torch.nn.CrossEntropyLoss()
+
+        self.loss_fn = loss_fn()
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(device)
 
-    def train(self, epochs: int = 100, batch_size: int = 64, verbose: bool = False) -> np.ndarray:
+    @property
+    def model(self) -> nn.Module:
+        return self._model
+
+    @model.setter
+    def model(self, model: nn.Module):
+        if not isinstance(model, nn.Module):
+            logger.error("Unsupported model type")
+            raise TypeError("Unsupported model type")
+
+        self._model = model
+        if hasattr(model, 'is_rating') and model.is_rating:
+            # does rating need to compute hyperparameters backward pass?
+            if model.hp_grad:
+                self.optim = torch.optim.Adam([
+                    {'params': model.ratings, 'lr': self.lr_rating},
+                    {'params': model.hyperparams, 'lr': self.lr}
+                ])
+            else:
+                self.optim = torch.optim.Adam(
+                    model.ratings, self.lr_rating
+                )
+        else:
+            self.optim = torch.optim.Adam(model.parameters(), lr=self.lr)
+
+    @model.deleter
+    def model(self):
+        del self._model
+        del self.optim
+        self._model = self.optim = None
+
+    @property
+    def dataset(self) -> DynamicGraphTemporalSignal:
+        return self._dataset
+
+    @dataset.setter
+    def dataset(self, dataset: DynamicGraphTemporalSignal):
+        self._dataset = dataset
+        trn, tst = temporal_signal_split(dataset, train_ratio=self.train_ratio)
+        self.train_dataset, self.test_dataset = trn, tst
+
+    @dataset.deleter
+    def dataset(self):
+        del self._dataset
+        del self.train_dataset
+        del self.test_dataset
+        self._dataset = self.train_dataset = self.test_dataset = None
+
+    def train(self, epochs: int = 100, batch_size: int = 64, verbose: bool = False, **kwargs) -> np.ndarray:
+        if hasattr(self.model, 'is_rating') and self.model.is_rating:
+            return self._train_rating(verbose=verbose, **kwargs)
+
         training_accuracy = []
+        self.model.train()
         for epoch in range(epochs):
-            self.model.train()
-            self.optimizer.zero_grad()
+            self.optim.zero_grad()
             accuracy, loss, count = 0, 0, 0
             for time, snapshot in enumerate(self.train_dataset):
                 y_hat = self.model(snapshot.edge_index)
@@ -49,14 +97,78 @@ class Trainer:
                 count += len(prediction)
 
                 cost.backward()
-                self.optimizer.step()
+                self.optim.step()
                 loss += cost.item()
 
             if verbose:
                 logger.info(f'[TRN] Epoch: {epoch}, training loss: {loss:.3f}, '
-                            f'training accuracy: {accuracy/count * 100:.2f}% '
+                            f'training accuracy: {accuracy / count * 100:.2f}% '
                             )
-            training_accuracy.append(accuracy/count * 100)
+            training_accuracy.append(accuracy / count * 100)
+        return np.array(training_accuracy)
+
+    def _loss_fn(self, y, y_hat, weight):
+        if isinstance(self.loss_fn, WeightedMSELoss):
+            return self.loss_fn(y, y_hat, weight)
+        else:
+            return self.loss_fn(y, y_hat)
+
+    def _train_rating(self, epochs: int = 1, verbose: bool = False, clip_grad: bool = False, **kwargs) -> np.ndarray:
+        model = self.model
+        training_accuracy = []
+        model.train()
+
+        for epoch in range(epochs):
+            accuracy, loss_acc, count = 0, 0, 0
+            for time, snapshot in enumerate(self.dataset):
+                # pass through network has to be only one by one in order to compute elo correctly
+                matches = snapshot.edge_index
+                match_points = snapshot.match_points
+                outcomes = snapshot.edge_attr
+                count += matches.shape[1]
+
+                if not model.is_manual:
+                    self.optim.zero_grad()
+
+                for m in range(matches.shape[1]):
+
+                    match = matches[:, m]
+
+                    y_hat = model(match)
+                    y = outcomes[m, :]  # edge weight encodes the match outcome
+                    if not model.is_manual:
+                        y.requires_grad = True
+
+                    target = torch.argmax(y) / 2.
+                    target = target.detach()
+                    prediction = y_hat
+
+                    accuracy += 1 if abs(target - prediction) <= 0.5 else 0
+
+                    home_pts, away_pts = match_points[m, 0], match_points[m, 1]
+                    point_diff = torch.abs(home_pts - away_pts)
+
+                    loss = self._loss_fn(y, y_hat, (point_diff + 1) ** model.gamma)
+                    loss_acc += loss.item()
+
+                    if model.is_manual:
+                        model.backward([target, home_pts, away_pts])
+                    else:
+                        loss.backward()
+                        if clip_grad:
+                            # Clip gradients to prevent explosion
+                            # This should be used when training c, d hyper params as well
+                            torch.nn.utils.clip_grad_norm_(model.hyperparams, max_norm=1)
+                        self.optim.step()
+
+            if verbose:
+                rating = model.ratings[0][:5] if len(model.ratings[0]) >= 5 else model.ratings[0]
+                logger.info(f'[TRN] '
+                            f' Epoch: {epoch}, training loss: {loss_acc:.3f}, '
+                            f'training accuracy: {accuracy / count * 100:.2f}% \n'
+                            f'ratings (first 5): {rating}')
+            training_accuracy.append(accuracy / count * 100)
+
         return np.array(training_accuracy)
 
     def test(self, verbose: bool = False) -> float:
@@ -75,6 +187,3 @@ class Trainer:
             logger.info(f'[TST] Testing accuracy: {100. * test_accuracy:.2f}%')
 
         return test_accuracy
-
-
-

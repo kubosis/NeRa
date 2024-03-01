@@ -36,11 +36,10 @@ class RatingReference:
 
         self._matches = (matches, team_mapping)
 
-    def compute_reference(self, rating: str, **kwargs):
+    def compute_reference(self, rating: str, **kwargs) -> Sequence[np.ndarray]:
         """
         :param rating: (str) 'elo' / 'berrar' / 'pi'
-        :param kwargs: for keyword arguments see doc for _*rating*_reference methods
-        :return: tuple
+        :return: Sequence[ndarray] computed rating values
         """
         match rating:
             case 'elo':
@@ -54,7 +53,7 @@ class RatingReference:
                 raise ValueError(f'Unknown rating {rating}')
 
     def _elo_reference(self, elo_base: int = 1000, gamma: float = 2, c: float = 3, d: float = 500,
-                       k: float = 3, verbose: bool = False, **kwargs):
+                       k: float = 3, verbose: bool = False, **kwargs) -> Sequence[np.ndarray]:
         """
         Compute elo rating manually from natches dataframe
         :param elo_base: (float) base elo value
@@ -63,8 +62,7 @@ class RatingReference:
         :param d: (float) hyperparameter
         :param k: (float) learning rate
         :param verbose: (bool) print
-        :return: tuple(np.ndarray, list, list)
-                - computed elo ratings, list of E_H values and list of ratings during computation
+        :return: np.ndarray with elo values
         """
         matches, mapping = self._matches
         elo = np.zeros((len(mapping),)) + elo_base
@@ -95,4 +93,4 @@ class RatingReference:
 
             if verbose:
                 print(f"iteration {i}, rating: {elo}, E_H = {E_h}; {S_h}")
-        return np.array(elo), E_HS, elos
+        return [np.array(elo)]
