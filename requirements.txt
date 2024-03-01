@@ -1,6 +1,10 @@
 numpy>=1.26.4
+pandas>=1.3.5
 
 torch
+
+cython
+
 torch_sparse
 torch_scatter
 torch_geometric
@@ -10,7 +14,6 @@ torch_geometric_temporal
 loguru
 nba_api==1.4.1
 
-pandas>=1.3.5
 selenium>=4.18.1
 
 SQLAlchemy
