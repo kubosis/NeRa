@@ -23,5 +23,5 @@ jobs:
           pip install mypy
           pip install flake8
 
-      - run: black --check nera
-      - run: flake8 nera
+      - run: black --check neuralogic
+      - run: flake8 neuralogic
