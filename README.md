@@ -10,7 +10,7 @@ PyTorch based package for incorporating rating systems to graph neural networks.
 ### Prerequisities
 
 ```
-Python >= 3.8
+Python >= 3.11
 ```
 
 ### Installation
