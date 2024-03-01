@@ -1,9 +1,9 @@
 from ._model import *
 
 
-class EloAutoGrad(EloModel):
+class EloNumerical(EloModel):
     """
-    Elo with autograd
+    Elo with autograd numerical backward pass
 
     Loss function should be weighted MSE. Weight is the goal difference in the match raised to the power of
     EloAutoGrad.gamma parameter
@@ -18,7 +18,7 @@ class EloAutoGrad(EloModel):
         :keyword d: (1, torch.Tensor, float64) rating meta parameter, default value = 500.
         :keyword k: (float) learning rate, default value = 2.
         """
-        super(EloAutoGrad, self).__init__(team_count, **kwargs)
+        super(EloNumerical, self).__init__(team_count, **kwargs)
 
     def forward(self, matches: Matches):
         self.home, self.away = matches

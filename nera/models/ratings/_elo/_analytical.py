@@ -41,9 +41,9 @@ class EloFunction(torch.autograd.Function):
 elo_function = EloFunction.apply
 
 
-class EloGrad(EloModel):
+class EloAnalytical(EloModel):
     """
-    Elo with gradient with manual backward pass
+    Elo with gradient with analytical backward pass
 
     Loss function should be weighted MSE. Weight is the goal difference in the match raised to the power of
     EloGrad.gamma parameter
@@ -58,7 +58,7 @@ class EloGrad(EloModel):
         :keyword d: (1, torch.Tensor, float64) rating meta parameter, default value = 500.
         :keyword k: (float) learning rate, default value = 2.
         """
-        super(EloGrad, self).__init__(team_count, cd_grad=cd_grad, **kwargs)
+        super(EloAnalytical, self).__init__(team_count, cd_grad=cd_grad, **kwargs)
 
     def forward(self, matches: Matches):
         self.home, self.away = matches
