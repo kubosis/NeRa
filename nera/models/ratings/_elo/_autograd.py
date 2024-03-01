@@ -9,7 +9,7 @@ class EloAutoGrad(EloModel):
     EloAutoGrad.gamma parameter
     """
 
-    def __init__(self, team_count: int, cd_grad: bool = False, **kwargs):
+    def __init__(self, team_count: int, **kwargs):
         """
         :param team_count: (int) number of teams
         :keyword default: (float) default rating of all teams, default value = 1000.
@@ -18,9 +18,9 @@ class EloAutoGrad(EloModel):
         :keyword d: (1, torch.Tensor, float64) rating meta parameter, default value = 500.
         :keyword k: (float) learning rate, default value = 2.
         """
-        super(EloAutoGrad, self).__init__(team_count, cd_grad=cd_grad, **kwargs)
+        super(EloAutoGrad, self).__init__(team_count, **kwargs)
 
     def forward(self, matches: Matches):
         self.home, self.away = matches
-        E_H = 1 / (1 + torch.pow(self.c, ((self.rating[self.away] - self.rating[self.home]) / self.d)))
+        E_H = 1 / (1 + torch.pow(self.c, ((self.elo[self.away] - self.elo[self.home]) / self.d)))
         return E_H

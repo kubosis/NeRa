@@ -62,4 +62,4 @@ class EloGrad(EloModel):
 
     def forward(self, matches: Matches):
         self.home, self.away = matches
-        return elo_function(self.rating[self.home], self.rating[self.away], self.c, self.d)
+        return elo_function(self.elo[self.home], self.elo[self.away], self.c, self.d)

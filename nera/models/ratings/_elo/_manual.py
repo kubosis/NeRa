@@ -17,11 +17,12 @@ class EloManual(EloModel):
         :keyword k: (float) learning rate, default value = 2.
         """
         super(EloManual, self).__init__(team_count, **kwargs)
+        self.is_manual = True
 
     def forward(self, matches: Matches):
         self.home, self.away = matches
-        home_rating = self.rating[self.home]
-        away_rating = self.rating[self.away]
+        home_rating = self.elo[self.home]
+        away_rating = self.elo[self.away]
 
         with torch.no_grad():
             self.E_H = 1 / (1 + torch.pow(self.c, ((away_rating - home_rating) / self.d)))
@@ -30,14 +31,16 @@ class EloManual(EloModel):
 
     def backward(self, result: Result):
         with torch.no_grad():
-            match_outcome, goal_difference = result
+            match_outcome, home_pts, away_pts = result
+
+            goal_difference = torch.abs(home_pts - away_pts)
 
             h_i = self.home
             a_i = self.away
 
             update = self.k * ((1 + goal_difference) ** self.gamma) * (match_outcome - self.E_H)
 
-            self.rating[h_i] += update
-            self.rating[a_i] -= update
+            self.elo[h_i] += update
+            self.elo[a_i] -= update
 
         return result

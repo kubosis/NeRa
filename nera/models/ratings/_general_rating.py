@@ -9,9 +9,11 @@ Result = Sequence[np.ndarray]
 Index = int
 
 
-class GeneralRating(nn.Module):
-    def __init__(self, params: dict, **kwargs):
-        super(GeneralRating, self).__init__()
+class _GeneralRating(nn.Module):
+    def __init__(self, params: dict, learnable: dict, **kwargs):
+        super(_GeneralRating, self).__init__()
+
+        self.hyperparams = []
 
         self.hp_grad = False  # compute gradient of hyper params?
         if 'hp_grad' in kwargs:
@@ -25,12 +27,16 @@ class GeneralRating(nn.Module):
             else:
                 par = params[elem]
 
-            if self.hp_grad:
+            if self.hp_grad and learnable[elem]:
                 par.requires_grad = True
                 par = nn.Parameter(par)
+                setattr(self, elem, par)
+                self.hyperparams.append(getattr(self, elem))
             else:
                 par = par.detach()
-
-            setattr(self, elem, par)
+                setattr(self, elem, par)
 
         self.home, self.away = None, None
+
+        self.is_rating = True
+        self.is_manual = False
