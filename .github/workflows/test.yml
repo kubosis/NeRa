@@ -24,13 +24,27 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Set up Python environment
         run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
           pip install torch==2.1.2
           pip install -r requirements.txt
-          pip install pytest-cov
-      - name: Run tests
+          pip install coverage
+          
+      - name: Run tests with coverage
         run: |
-          pytest --cov=nera --cov-report=xml
+          coverage run -m unittest discover -s test
+  
+      - name: Generate coverage report
+        run: |
+          coverage report
+          coverage xml  
+  
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
+        with:
+          file: ./coverage.xml  
+          flags: unittests 
+          name: codecov-nera  
