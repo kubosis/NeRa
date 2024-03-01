@@ -1,8 +1,12 @@
 from typing import Any
+import random
+from datetime import timedelta, datetime
+import copy
 
 import torch.nn as nn
+import pandas as pd
 
-__all__ = ["process_kwargs", "print_rating_diff"]
+__all__ = ["process_kwargs", "print_rating_diff", "generate_random_matches"]
 
 
 def process_kwargs(mandatory: list, **kwargs) -> tuple[list[Any], dict[str, Any]]:
@@ -17,7 +21,6 @@ def process_kwargs(mandatory: list, **kwargs) -> tuple[list[Any], dict[str, Any]
 
 def print_rating_diff(rating1: nn.Module, rating2: nn.Module, transform,
                       rat_1_name: str = "Numerical", rat_2_name: str = "Symbolical", eps: float = 1e-2):
-
     assert hasattr(rating1, 'is_rating') and rating1.is_rating and hasattr(rating2, 'is_rating') and rating2.is_rating
 
     numerical = rating1
@@ -70,3 +73,55 @@ def print_rating_diff(rating1: nn.Module, rating2: nn.Module, transform,
         ana_hp_i = analytical.hyperparams[hp]
         print(f"{rat_1_name}: hyperparam[{hp}] = {float(num_hp_i):8.3f} :: "
               f"{rat_1_name}: hyperparam[{hp}] = {float(ana_hp_i):8.3f}")
+
+
+def generate_random_matches(team_count: int, matches_per_season: int, season_count: int) -> pd.DataFrame:
+    team_names = [f'team_{i}' for i in range(team_count)]
+    match_count = matches_per_season * season_count
+
+    def generate_sequence(length, elements):
+        if len(elements) < 2 and length > 1:
+            raise ValueError("Need at least two distinct elements for sequences longer than 1")
+
+        sequence = [random.choice(elements)]
+
+        for _ in range(1, length):
+            # Select a random element that is not the same as the last element in the sequence
+            next_element = random.choice([el for el in elements if el != sequence[-1]])
+            sequence.append(next_element)
+
+        return sequence
+
+    home_teams = generate_sequence(match_count, team_names)
+    away_teams = copy.deepcopy(home_teams[1:])  # made so that never the same team plays with itself
+    away_teams.append(home_teams[0])
+
+    winners = []
+    home_points = []
+    away_points = []
+    for _ in range(len(home_teams)):
+        rand_home = random.randint(0, 100)
+        rand_away = random.randint(0, 100)
+        winner = 'home' if rand_home > rand_away else 'away' if rand_home < rand_away else 'draw'
+        winners.append(winner)
+        home_points.append(rand_home)
+        away_points.append(rand_away)
+
+    dt = []
+    delta1 = timedelta(seconds=1)
+    delta2 = timedelta(days=366)
+    now = datetime.now()
+    for i in range(season_count):
+        dt.extend([*[now - i * delta2 + j * delta1 for j in range(matches_per_season)]])
+
+    data = pd.DataFrame(
+        {'DT': dt,
+         'Home': home_teams,
+         'Away': away_teams,
+         'Winner': winners,
+         'Home_points': home_points,
+         'Away_points': away_points,
+         'League': [*(match_count * ['liga'])],
+         })
+    data = data.sort_values(by='DT', ascending=False)
+    return data

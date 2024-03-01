@@ -52,8 +52,8 @@ class RatingReference:
                 logger.error(f'Unknown rating {rating}')
                 raise ValueError(f'Unknown rating {rating}')
 
-    def _elo_reference(self, elo_base: int = 1000, gamma: float = 2, c: float = 3, d: float = 500,
-                       k: float = 3, verbose: bool = False, **kwargs) -> Sequence[np.ndarray]:
+    def _elo_reference(self, elo_base: int = 1000, gamma: float = 2., c: float = 3., d: float = 500.,
+                       k: float = 3., verbose: bool = False, **kwargs) -> Sequence[np.ndarray]:
         """
         Compute elo rating manually from natches dataframe
         :param elo_base: (float) base elo value
@@ -65,10 +65,11 @@ class RatingReference:
         :return: np.ndarray with elo values
         """
         matches, mapping = self._matches
+
         elo = np.zeros((len(mapping),)) + elo_base
         E_HS = []
         elos = []
-        for i in range(len(matches.index)):
+        for i in range(len(matches.index)-1, -1, -1):
             match_i = matches.iloc[i]
             h_i = mapping[match_i['Home']]
             a_i = mapping[match_i['Away']]

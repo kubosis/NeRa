@@ -31,7 +31,9 @@ class EloManual(EloModel):
 
     def backward(self, result: Result):
         with torch.no_grad():
-            match_outcome, home_pts, away_pts = result
+            home_pts, away_pts = result
+
+            match_outcome = 1. if home_pts > away_pts else 0. if home_pts < away_pts else 1/2
 
             goal_difference = torch.abs(home_pts - away_pts)
 

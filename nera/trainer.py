@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 from torch_geometric_temporal.signal import temporal_signal_split, DynamicGraphTemporalSignal
@@ -12,22 +14,27 @@ class Trainer:
     Basic training class for predefined models
     """
 
-    def __init__(self, dataset: DynamicGraphTemporalSignal, model: nn.Module,
+    def __init__(self, dataset: Optional[DynamicGraphTemporalSignal] = None, model: Optional[nn.Module] = None,
                  lr: float = .001, lr_rating: float = 3., loss_fn=WeightedMSELoss, train_ratio: float = 0.8, **kwargs):
 
         self.train_dataset, self.test_dataset = None, None
         self.train_ratio = train_ratio
-        self.dataset = dataset
+
+        if dataset is not None:
+            self.dataset = dataset
+        else:
+            self._dataset = None
 
         self.lr = lr
         self.lr_rating = lr_rating
         self.optim = None
-        self.model = model
+
+        if model is not None:
+            self.model = model
+        else:
+            self._model = None
 
         self.loss_fn = loss_fn()
-
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(device)
 
     @property
     def model(self) -> nn.Module:
@@ -54,6 +61,9 @@ class Trainer:
         else:
             self.optim = torch.optim.Adam(model.parameters(), lr=self.lr)
 
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(device)
+
     @model.deleter
     def model(self):
         del self._model
@@ -78,6 +88,10 @@ class Trainer:
         self._dataset = self.train_dataset = self.test_dataset = None
 
     def train(self, epochs: int = 100, batch_size: int = 64, verbose: bool = False, **kwargs) -> np.ndarray:
+
+        assert self.model is not None, "Model has to be set"
+        assert self.dataset is not None, "Dataset has to be set"
+
         if hasattr(self.model, 'is_rating') and self.model.is_rating:
             return self._train_rating(verbose=verbose, **kwargs)
 
@@ -152,7 +166,7 @@ class Trainer:
                     loss_acc += loss.item()
 
                     if model.is_manual:
-                        model.backward([target, home_pts, away_pts])
+                        model.backward([home_pts, away_pts])
                     else:
                         loss.backward()
                         if clip_grad:

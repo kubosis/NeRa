@@ -79,6 +79,7 @@ class DataTransformation:
 
         for _ in range(self.snapshot_count):
             df_i = self.df[((start_date + delta >= self.df['DT']) & (start_date <= self.df['DT']))]
+            df_i = df_i.sort_values(by='DT')
 
             # discount features from t-1 snapshot
             home_wins *= discount_factor
@@ -145,7 +146,7 @@ class DataTransformation:
 
         for _ in range(self.snapshot_count):
             df_i = self.df[((self.df['DT'] >= start_date) & (self.df['DT'] < start_date + delta))]
-            #df_i = df_i.sort_values(by='DT')
+            df_i = df_i.sort_values(by='DT')
 
             edges.append(df_i.loc[:, ['Home', 'Away']].to_numpy().astype(int).T)
 
@@ -177,7 +178,7 @@ class DataTransformation:
 
             start_date += delta
 
-        return edges[::-1], edge_features[::-1], labels[::-1], match_points[::-1]
+        return edges, edge_features, labels, match_points
 
     def get_dataset(self, node_f_extract: bool = False, node_f_discount: float = 0.75, node_f_draws: bool = False,
                     edge_f_one_hot: bool = False, verbose: bool = False) -> DynamicGraphTemporalSignal:
