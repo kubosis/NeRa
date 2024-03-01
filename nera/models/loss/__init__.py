@@ -1,1 +1,1 @@
-from ._weighted_MSE import *
+from ._weighted_MSE import WeightedMSELoss

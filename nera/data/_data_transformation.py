@@ -64,7 +64,6 @@ class DataTransformation:
     def _extract_node_features(self, discount_factor: float, use_draws: bool, verbose: bool) -> list[np.ndarray]:
         delta = self.delta
         start_date = self.start_date
-        end_date = self.end_date
 
         node_features = []
 
@@ -135,7 +134,6 @@ class DataTransformation:
         """ extract dynamically changing edges and their features """
         delta = self.delta
         start_date = self.start_date
-        end_date = self.end_date
 
         edges = []
         edge_features = []

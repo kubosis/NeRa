@@ -38,5 +38,3 @@ class BerrarManual(BerrarModel):
             self.a_def[a] += lr_a_def * (goals_home - self.g_h)
 
         return result
-
-

@@ -10,7 +10,7 @@ simple file for executing nera directly via command line
 import argparse
 import sys
 
-from .data import *
+from .data import DataAcquisition, FROM_CSV, FROM_FLASHSCORE, FROM_NBA_STATS
 from .utils import process_kwargs
 
 

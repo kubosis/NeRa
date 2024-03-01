@@ -92,7 +92,7 @@ def ssh_save_data_to_postgres(df: pd.DataFrame, db_name: str, table: str, schema
         raise ValueError("Cannot push NoneType dataframe")
 
     # connect to PostgreSQL
-    local_port = 5432  #  str(ssh_server.local_bind_port)
+    local_port = 5432  # str(ssh_server.local_bind_port)
     host = 'localhost'
     connect_string = f'postgresql://{db_user}:{db_pwd}@{host}:{local_port}/{db_name}'
     engine = create_engine(connect_string,

@@ -104,7 +104,8 @@ class DataAcquisition:
                 driver.execute_script("arguments[0].scrollIntoView();arguments[1].click();",
                                       more, WebDriverWait(driver, 20).until(EC.element_to_be_clickable(more)))
                 time.sleep(3)  # give driver time to load the page
-            except:
+            except Exception as e:
+                logger.info(e)
                 # no clickable element for loading more data on page found
                 break
 

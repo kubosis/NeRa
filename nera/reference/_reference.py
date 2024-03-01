@@ -41,16 +41,15 @@ class RatingReference:
         :param rating: (str) 'elo' / 'berrar' / 'pi'
         :return: Sequence[ndarray] computed rating values
         """
-        match rating:
-            case 'elo':
-                return self._elo_reference(**kwargs)
-            case 'berrar':
-                raise NotImplementedError
-            case 'pi':
-                raise NotImplementedError
-            case _:
-                logger.error(f'Unknown rating {rating}')
-                raise ValueError(f'Unknown rating {rating}')
+        if rating == 'elo':
+            return self._elo_reference(**kwargs)
+        elif rating == 'berrar':
+            raise NotImplementedError
+        elif rating == 'pi':
+            raise NotImplementedError
+        else:
+            logger.error(f'Unknown rating {rating}')
+            raise ValueError(f'Unknown rating {rating}')
 
     def _elo_reference(self, elo_base: int = 1000, gamma: float = 2., c: float = 3., d: float = 500.,
                        k: float = 3., verbose: bool = False, **kwargs) -> Sequence[np.ndarray]:
@@ -69,7 +68,7 @@ class RatingReference:
         elo = np.zeros((len(mapping),)) + elo_base
         E_HS = []
         elos = []
-        for i in range(len(matches.index)-1, -1, -1):
+        for i in range(len(matches.index) - 1, -1, -1):
             match_i = matches.iloc[i]
             h_i = mapping[match_i['Home']]
             a_i = mapping[match_i['Away']]
