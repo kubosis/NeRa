@@ -28,6 +28,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install torch==2.1.2
+          pip install torch-scatter==latest+cpu torch-sparse==latest+cpu -f https://pytorch-geometric.com/whl/torch-1.6.0.html 
           pip install -r requirements.txt
           pip install coverage
           
