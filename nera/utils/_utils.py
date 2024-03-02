@@ -2,11 +2,15 @@ from typing import Any
 import random
 from datetime import timedelta, datetime
 import copy
+from contextlib import contextmanager
 
 import torch.nn as nn
+import torch
 import pandas as pd
+import numpy as np
 
-__all__ = ["process_kwargs", "print_rating_diff", "generate_random_matches"]
+__all__ = ["process_kwargs", "print_rating_diff", "generate_random_matches", "conditional_nograd_context",
+           "one_hot_encode", "normalize_array"]
 
 
 def process_kwargs(mandatory: list, **kwargs) -> tuple[list[Any], dict[str, Any]]:
@@ -125,3 +129,31 @@ def generate_random_matches(team_count: int, matches_per_season: int, season_cou
          })
     data = data.sort_values(by='DT', ascending=False)
     return data
+
+
+@contextmanager
+def conditional_nograd_context(nograd: bool):
+    """
+    Context manager to conditionally apply a context.
+
+    Parameters:
+    - condition (bool): If True, applies torch.no_grad() context.
+    """
+    if nograd:
+        with torch.no_grad():
+            yield
+    else:
+        yield
+
+
+def normalize_array(array: np.ndarray) -> np.ndarray:
+    denominator = np.max(array) - np.min(array)
+    denominator = 1 if denominator == 0 else denominator
+    normalized = (array - np.min(array)) / denominator
+    return normalized
+
+
+def one_hot_encode(i: int, max_n: int) -> np.ndarray:
+    out = np.zeros((max_n,))
+    out[i] = 1
+    return out
