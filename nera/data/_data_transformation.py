@@ -1,22 +1,10 @@
 import pandas as pd
 import numpy as np
 from loguru import logger
-from datetime import datetime, timedelta
+from datetime import timedelta
 from torch_geometric_temporal.signal import DynamicGraphTemporalSignal
-import torch
 
-
-def normalize_array(array: np.ndarray) -> np.ndarray:
-    denominator = np.max(array) - np.min(array)
-    denominator = 1 if denominator == 0 else denominator
-    normalized = (array - np.min(array)) / denominator
-    return normalized
-
-
-def one_hot_encode(i: int, max_n: int) -> np.ndarray:
-    out = np.zeros((max_n,))
-    out[i] = 1
-    return out
+from ..utils import one_hot_encode, normalize_array
 
 
 class DataTransformation:
@@ -75,9 +63,12 @@ class DataTransformation:
         home_draws = np.zeros((self.num_teams,))
 
         i = 0
-
+        last_df_i = None
         for _ in range(self.snapshot_count):
             df_i = self.df[((start_date + delta >= self.df['DT']) & (start_date <= self.df['DT']))]
+            if last_df_i is not None:
+                # filter out those matches already present in last snapshot
+                df_i = df_i.drop(last_df_i.index, errors='ignore')
             df_i = df_i.sort_values(by='DT')
 
             # discount features from t-1 snapshot
@@ -126,10 +117,11 @@ class DataTransformation:
 
             start_date += delta
             i += 1
+            last_df_i = df_i
 
         return node_features
 
-    def _extract_dynamic_edges_and_labels(self, one_hot: bool)\
+    def _extract_dynamic_edges_and_labels(self, one_hot: bool) \
             -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
         """ extract dynamically changing edges and their features """
         delta = self.delta
@@ -142,8 +134,12 @@ class DataTransformation:
 
         leagues = self.df['League'].unique()
 
+        last_df_i = None
         for _ in range(self.snapshot_count):
             df_i = self.df[((self.df['DT'] >= start_date) & (self.df['DT'] < start_date + delta))]
+            if last_df_i is not None:
+                # filter out those matches already present in last snapshot
+                df_i = df_i.drop(last_df_i.index, errors='ignore')
             df_i = df_i.sort_values(by='DT')
 
             edges.append(df_i.loc[:, ['Home', 'Away']].to_numpy().astype(int).T)
@@ -175,6 +171,7 @@ class DataTransformation:
             labels.append(team_ranks.astype(float))
 
             start_date += delta
+            last_df_i = df_i
 
         return edges, edge_features, labels, match_points
 
