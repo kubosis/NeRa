@@ -3,7 +3,31 @@ from torch import Tensor
 from ._model import *
 
 
-class EloFunction(torch.autograd.Function):
+class EloAnalytical(EloModel):
+    """
+    Elo with gradient with analytical backward pass
+
+    Loss function should be weighted MSE. Weight is the goal difference in the match raised to the power of
+    EloGrad.gamma parameter
+    """
+
+    def __init__(self, team_count: int, cd_grad: bool = False, **kwargs):
+        """
+        :param team_count: (int) number of teams
+        :keyword default: (float) default rating of all teams, default value = 1000.
+        :keyword gamma: (float) impact scale of goal difference, default value = 2.
+        :keyword c: (float) rating meta parameter, default value = 3.
+        :keyword d: (float) rating meta parameter, default value = 500.
+        :keyword k: (float) learning rate, default value = 3.
+        """
+        super(EloAnalytical, self).__init__(team_count, cd_grad=cd_grad, **kwargs)
+
+    def forward(self, matches: Matches):
+        self.home, self.away = matches
+        return _elo_fn(self.elo[self.home], self.elo[self.away], self.c, self.d)
+
+
+class _EloFunction(torch.autograd.Function):
     @staticmethod
     def forward(home_rating: Tensor, away_rating: Tensor, c: Tensor, d: Tensor) -> Tensor:
         E_H = 1 / (1 + torch.pow(c, ((away_rating - home_rating) / d)))
@@ -38,28 +62,5 @@ class EloFunction(torch.autograd.Function):
         return grad_h_rtg, grad_a_rtg, grad_c, grad_d
 
 
-elo_function = EloFunction.apply
-
-
-class EloAnalytical(EloModel):
-    """
-    Elo with gradient with analytical backward pass
-
-    Loss function should be weighted MSE. Weight is the goal difference in the match raised to the power of
-    EloGrad.gamma parameter
-    """
-
-    def __init__(self, team_count: int, cd_grad: bool = False, **kwargs):
-        """
-        :param team_count: (int) number of teams
-        :keyword default: (float) default rating of all teams, default value = 1000.
-        :keyword gamma: (float) impact scale of goal difference, default value = 2.
-        :keyword c: (1, torch.Tensor, float64) rating meta parameter, default value = 3.
-        :keyword d: (1, torch.Tensor, float64) rating meta parameter, default value = 500.
-        :keyword k: (float) learning rate, default value = 2.
-        """
-        super(EloAnalytical, self).__init__(team_count, cd_grad=cd_grad, **kwargs)
-
-    def forward(self, matches: Matches):
-        self.home, self.away = matches
-        return elo_function(self.elo[self.home], self.elo[self.away], self.c, self.d)
+# create alias
+_elo_fn = _EloFunction.apply
