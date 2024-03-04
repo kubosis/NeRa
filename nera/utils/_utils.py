@@ -47,7 +47,7 @@ def print_rating_diff(rating1: nn.Module, rating2: nn.Module, transform,
             diff = abs(auto - grad)
             if diff > eps:
                 err = True
-                diff_percentage[rat] += diff / (abs(auto + grad) / 2)
+                diff_percentage[rat] += diff / ((abs(auto) + abs(grad)) / 2)
                 err_sum[rat] += diff
                 err_count[rat] += 1
                 max_diff[rat] = max(diff, max_diff[rat])
