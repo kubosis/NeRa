@@ -8,9 +8,9 @@ from nera.utils import generate_random_matches
 
 class TestDataTransformation(unittest.TestCase):
     def setUp(self):
-        self.team_count = random.randint(4, 20)
-        self.number_of_seasons = random.randint(1, 10)
-        self.matches_per_season = random.randint(10, 100)
+        self.team_count = random.randint(10, 20)
+        self.number_of_seasons = random.randint(50, 100)
+        self.matches_per_season = random.randint(1000, 5000)
 
         self.dataset = generate_random_matches(self.team_count, self.matches_per_season, self.number_of_seasons)
         self.transform = DataTransformation(self.dataset, timedelta(days=365))
