@@ -8,7 +8,7 @@ class EloModel(_GeneralRating):
         'gamma': torch.tensor(2., dtype=torch.float64),
         'c': torch.tensor(3., dtype=torch.float64),
         'd': torch.tensor(500., dtype=torch.float64),
-        'default': 1000.
+        'default': torch.tensor(1000., dtype=torch.float64)
     }
 
     _learnable = {key: False for key in _params}
