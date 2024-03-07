@@ -220,7 +220,7 @@ class Trainer:
         for m in range(matches.shape[1]):
             match = matches[:, m]
 
-            y_hat = self.model(match)
+            y_hat = torch.mean(self.model(match))
             y = outcomes[m, :]  # edge weight encodes the match outcome
             if not self.model.is_manual:
                 y.requires_grad = True
@@ -229,7 +229,7 @@ class Trainer:
             target = target.detach()
             prediction = y_hat
 
-            accuracy += 1 if abs(target - prediction) <= 0.5 else 0
+            accuracy += 1 if abs(target - prediction) < 0.5 else 0
 
             home_pts, away_pts = match_points[m, 0], match_points[m, 1]
             point_diff = torch.abs(home_pts - away_pts)
@@ -278,7 +278,7 @@ class Trainer:
         return correct, count
 
     def _test_rating(self, snapshot):
-        y_hat = self.model(snapshot.edge_index)
+        y_hat = torch.mean(self.model(snapshot.edge_index), dim=1)
         y = snapshot.edge_attr
         target = torch.argmax(y, dim=1) / 2.
         correct = torch.sum(torch.abs(target - y_hat) < 0.5).item()

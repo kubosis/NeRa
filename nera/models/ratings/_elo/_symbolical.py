@@ -26,25 +26,59 @@ class EloSymbolical(EloModel):
         self.rating_dim = rating_dim
         if rating_dim > 1:
             default = kwargs.get('default', self._params['default'])
-            self.elo = nn.Parameter(torch.full((team_count, rating_dim), default, dtype=torch.float64))
+            mean = default
+            std = default / 100.
+
+            self.elo = nn.Parameter(torch.normal(mean, std, (team_count, rating_dim), dtype=torch.float64))
+            self.ratings = [self.elo]
 
     def forward(self, matches: Matches):
-        pass
+        home, away = matches
+
+        E_H = 1 / (1 + torch.pow(self.c, ((self.elo[away] - self.elo[home]) / self.d)))
+
+        return E_H
+
+        if self.rating_dim > 1:
+            return _sym_fn(self.elo[home, :], self.elo[away, :], self.c, self.d)
+        else:
+            return _sym_fn(self.elo[home], self.elo[away], self.c, self.d)
 
 
 class _SymFunction(torch.autograd.Function):
     @staticmethod
     def forward(home_rating: Tensor, away_rating: Tensor, c: Tensor, d: Tensor) -> Tensor:
-        pass
+        assert home_rating.shape == away_rating.shape
+
+        E_H = 1 / (1 + torch.pow(c, ((away_rating - home_rating) / d)))
+        return E_H
 
     @staticmethod
     def setup_context(ctx, inputs, output):
-        pass
+        home_rating, away_rating, c, d = inputs
+        E_H = output
+        ctx.save_for_backward(home_rating, away_rating, c, d, E_H)
 
-    # This function has only a single output, so it gets only one gradient
     @staticmethod
     def backward(ctx, grad_output):
-        pass
+        home_rating, away_rating, c, d, E_H = ctx.saved_tensors
+
+        cnst = E_H * (1 - E_H)
+
+        grad_a_rtg = - (torch.log(c) / d) * cnst
+        grad_h_rtg = - grad_a_rtg
+
+        rating_diff = away_rating - home_rating
+
+        grad_c = - (rating_diff / (d * c)) * cnst
+        grad_d = (rating_diff * torch.log(c) / torch.pow(d, 2)) * cnst
+
+        grad_h_rtg = (grad_output * grad_h_rtg)
+        grad_a_rtg = (grad_output * grad_a_rtg)
+        grad_c = torch.mean(grad_output * grad_c)
+        grad_d = torch.mean(grad_output * grad_d)
+
+        return grad_h_rtg, grad_a_rtg, grad_c, grad_d
 
 
 # create alias
