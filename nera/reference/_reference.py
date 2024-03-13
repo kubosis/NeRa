@@ -24,7 +24,7 @@ class RatingReference:
         if rating == 'elo':
             return self._elo_reference(temp_dataset, **kwargs)
         elif rating == 'berrar':
-            raise NotImplementedError
+            return self._berrar_reference(temp_dataset, **kwargs)
         elif rating == 'pi':
             raise NotImplementedError
         else:
@@ -78,13 +78,13 @@ class RatingReference:
                 iter_ += 1
         return [np.array(elo)]
 
-    def _berrar_reference(self, temp_dataset, base: float = 1000, alpha_a: float = 180, alpha_h: float = 180,
+    def _berrar_reference(self, temp_dataset, default: float = 1000, alpha_a: float = 180, alpha_h: float = 180,
                           beta_a: float = 2, beta_h: float = 2, bias_h: float = 0, bias_a: float = 0,
                           lr_a_att: float = 0.1, lr_h_att: float = 0.1,
                           lr_a_def: float = 0.1, lr_h_def: float = 0.1) -> Sequence[np.ndarray]:
 
-        att_ = torch.zeros((self.num_teams,)) + base
-        def_ = torch.zeros((self.num_teams,)) + base
+        att_ = torch.zeros((self.num_teams,), dtype=torch.float64) + default
+        def_ = torch.zeros((self.num_teams,), dtype=torch.float64) + default
 
         for time, snapshot in enumerate(temp_dataset):
             matches = snapshot.edge_index

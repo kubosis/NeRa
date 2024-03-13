@@ -217,6 +217,7 @@ class Trainer:
             self.optim.zero_grad()
 
         accuracy, loss_acc = 0, 0
+        mi = 0
         for m in range(matches.shape[1]):
             match = matches[:, m]
 
@@ -234,7 +235,8 @@ class Trainer:
             home_pts, away_pts = match_points[m, 0], match_points[m, 1]
             point_diff = torch.abs(home_pts - away_pts)
 
-            loss = self._loss_fn(y, y_hat, (point_diff + 1) ** self.model.gamma)
+            gamma = self.model.gamma if hasattr(self.model, 'gamma') else 1
+            loss = self._loss_fn(y, y_hat, (point_diff + 1) ** gamma)
             loss_acc += loss.item()
 
             if validation:

@@ -27,7 +27,7 @@ def eval_symbolic_elo():
 
     team_count = transform.num_teams
 
-    elo_sym = EloSymbolical(team_count=transform.num_teams, rating_dim=3, hp_grad=True, k=5)
+    elo_sym = EloSymbolical(team_count=team_count, rating_dim=3, hp_grad=True, k=5)
     trainer = Trainer(dataset)
     trainer.model = elo_sym
     trainer.train_ratio = 0.8
@@ -36,9 +36,12 @@ def eval_symbolic_elo():
     trainer.test(verbose=True)
 
     print(elo_sym.elo[:5])
+    print(acc_sym)
+
 
 def main():
     eval_symbolic_elo()
+
 
 if __name__ == '__main__':
     main()

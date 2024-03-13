@@ -41,7 +41,6 @@ class EloSymbolical(EloModel):
         return _sym_fn(self.elo[home, :], self.elo[away, :], self.c, self.d, self.k)
 
 
-
 class _SymFunction(torch.autograd.Function):
     @staticmethod
     def forward(home_rating: Tensor, away_rating: Tensor, c: Tensor, d: Tensor, k: float) -> Tensor:
