@@ -1,7 +1,6 @@
 from typing import Sequence
 
 import numpy as np
-import pandas as pd
 import torch
 from loguru import logger
 
@@ -26,7 +25,7 @@ class RatingReference:
         elif rating == 'berrar':
             return self._berrar_reference(temp_dataset, **kwargs)
         elif rating == 'pi':
-            raise NotImplementedError
+            return self._pi_reference(temp_dataset, **kwargs)
         else:
             logger.error(f'Unknown rating {rating}')
             raise ValueError(f'Unknown rating {rating}')
@@ -111,3 +110,46 @@ class RatingReference:
                 def_[a_i] += lr_a_def * (home_pts - ghat_h)
 
         return [att_, def_]
+
+    def _pi_reference(self, temp_dataset, lambda_: float = 0.1, gamma: float = 0.1,
+                      c: float = 100, default: float = 1000.) -> Sequence[np.ndarray]:
+
+        home_rating = torch.zeros((self.num_teams,), dtype=torch.float64) + default
+        away_rating = torch.zeros((self.num_teams,), dtype=torch.float64) + default
+
+        def psi(c, e):
+            return c * torch.log10(1 + e)
+
+        for time, snapshot in enumerate(temp_dataset):
+            matches = snapshot.edge_index
+            match_points = snapshot.match_points
+
+            for m in range(matches.shape[1]):
+                match = matches[:, m]
+
+                h, a = match
+                home_pts, away_pts = match_points[m, 0], match_points[m, 1]
+
+                # prediction
+                rh_H, rh_A = home_rating[h], home_rating[a]
+                ra_H, ra_A = away_rating[h], away_rating[a]
+
+                gda_H = torch.pow(10, torch.abs(ra_H) / c) - 1
+                gdh_H = torch.pow(10, torch.abs(rh_H) / c) - 1
+                gda_A = torch.pow(10, torch.abs(ra_A) / c) - 1
+                gdh_A = torch.pow(10, torch.abs(rh_A) / c) - 1
+
+                ghat_H = gdh_H - gda_H
+                ghat_A = gdh_A - gda_A
+
+                # update
+                err_H = torch.abs(home_pts - ghat_H)
+                err_A = torch.abs(away_pts - ghat_A)
+
+                home_rating[h] += lambda_ * psi(c, err_H)
+                away_rating[h] += gamma * (lambda_ * psi(c, err_H))
+
+                home_rating[a] += lambda_ * psi(c, err_A)
+                away_rating[a] += gamma * (lambda_ * psi(c, err_A))
+
+        return [home_rating, away_rating]

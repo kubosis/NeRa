@@ -1,6 +1,3 @@
-import torch
-import torch.nn as nn
-
 from .._general_rating import _GeneralRating
 from .._general_rating import *
 
