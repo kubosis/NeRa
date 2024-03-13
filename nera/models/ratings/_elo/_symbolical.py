@@ -29,25 +29,22 @@ class EloSymbolical(EloModel):
             mean = default
             std = default / 100.
 
-            self.elo = nn.Parameter(torch.normal(mean, std, (team_count, rating_dim), dtype=torch.float64))
+            if True:
+                self.elo = nn.Parameter(torch.normal(mean, std, (team_count, rating_dim), dtype=torch.float64))
+            else:
+                self.elo = nn.Parameter(torch.full((team_count, rating_dim), default, dtype=torch.float64))
             self.ratings = [self.elo]
 
     def forward(self, matches: Matches):
         home, away = matches
 
-        E_H = 1 / (1 + torch.pow(self.c, ((self.elo[away] - self.elo[home]) / self.d)))
+        return _sym_fn(self.elo[home, :], self.elo[away, :], self.c, self.d, self.k)
 
-        return E_H
-
-        if self.rating_dim > 1:
-            return _sym_fn(self.elo[home, :], self.elo[away, :], self.c, self.d)
-        else:
-            return _sym_fn(self.elo[home], self.elo[away], self.c, self.d)
 
 
 class _SymFunction(torch.autograd.Function):
     @staticmethod
-    def forward(home_rating: Tensor, away_rating: Tensor, c: Tensor, d: Tensor) -> Tensor:
+    def forward(home_rating: Tensor, away_rating: Tensor, c: Tensor, d: Tensor, k: float) -> Tensor:
         assert home_rating.shape == away_rating.shape
 
         E_H = 1 / (1 + torch.pow(c, ((away_rating - home_rating) / d)))
@@ -55,13 +52,13 @@ class _SymFunction(torch.autograd.Function):
 
     @staticmethod
     def setup_context(ctx, inputs, output):
-        home_rating, away_rating, c, d = inputs
+        home_rating, away_rating, c, d, k = inputs
         E_H = output
-        ctx.save_for_backward(home_rating, away_rating, c, d, E_H)
+        ctx.save_for_backward(home_rating, away_rating, c, d, E_H, k)
 
     @staticmethod
     def backward(ctx, grad_output):
-        home_rating, away_rating, c, d, E_H = ctx.saved_tensors
+        home_rating, away_rating, c, d, E_H, k = ctx.saved_tensors
 
         cnst = E_H * (1 - E_H)
 
@@ -78,7 +75,7 @@ class _SymFunction(torch.autograd.Function):
         grad_c = torch.mean(grad_output * grad_c)
         grad_d = torch.mean(grad_output * grad_d)
 
-        return grad_h_rtg, grad_a_rtg, grad_c, grad_d
+        return k * grad_h_rtg, k * grad_a_rtg, grad_c, grad_d, None
 
 
 # create alias
