@@ -2,6 +2,7 @@ from typing import Sequence
 
 import numpy as np
 import pandas as pd
+import torch
 from loguru import logger
 
 
@@ -76,3 +77,37 @@ class RatingReference:
                     print(f"iteration {iter_}, rating: {elo}, E_H = {E_h}; {S_h}")
                 iter_ += 1
         return [np.array(elo)]
+
+    def _berrar_reference(self, temp_dataset, base: float = 1000, alpha_a: float = 180, alpha_h: float = 180,
+                          beta_a: float = 2, beta_h: float = 2, bias_h: float = 0, bias_a: float = 0,
+                          lr_a_att: float = 0.1, lr_h_att: float = 0.1,
+                          lr_a_def: float = 0.1, lr_h_def: float = 0.1) -> Sequence[np.ndarray]:
+
+        att_ = torch.zeros((self.num_teams,)) + base
+        def_ = torch.zeros((self.num_teams,)) + base
+
+        for time, snapshot in enumerate(temp_dataset):
+            matches = snapshot.edge_index
+            match_points = snapshot.match_points
+
+            for m in range(matches.shape[1]):
+                match = matches[:, m]
+
+                h_i, a_i = match
+                home_pts, away_pts = match_points[m, 0], match_points[m, 1]
+
+                hatt, hdef = att_[h_i], def_[h_i]
+                aatt, adef = att_[a_i], def_[a_i]
+
+                # prediction
+                ghat_h = alpha_h / (1 + torch.exp(-beta_h * (hatt + adef) - bias_h))
+                ghat_a = alpha_a / (1 + torch.exp(-beta_a * (aatt + hdef) - bias_a))
+
+                # update
+                att_[h_i] += lr_h_att * (home_pts - ghat_h)
+                def_[h_i] += lr_h_def * (away_pts - ghat_a)
+
+                att_[a_i] += lr_a_att * (away_pts - ghat_a)
+                def_[a_i] += lr_a_def * (home_pts - ghat_h)
+
+        return [att_, def_]
