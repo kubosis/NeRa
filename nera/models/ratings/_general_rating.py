@@ -15,6 +15,8 @@ class _GeneralRating(nn.Module):
 
         self.hyperparams = []
 
+        self._hp_backup = {}
+
         self.hp_grad = False  # compute gradient of hyper params?
         if 'hp_grad' in kwargs:
             self.hp_grad = kwargs['hp_grad']
@@ -32,6 +34,7 @@ class _GeneralRating(nn.Module):
                 par = nn.Parameter(par)
                 setattr(self, elem, par)
                 self.hyperparams.append(getattr(self, elem))
+                self._hp_backup[elem] = par
             else:
                 par = par.detach()
                 setattr(self, elem, par)
@@ -40,3 +43,11 @@ class _GeneralRating(nn.Module):
 
         self.is_rating = True
         self.is_manual = False
+
+        self.type = None
+
+    def reset_hyperparams(self):
+        self.hyperparams = []
+        for key, val in self._hp_backup.values():
+            setattr(self, key, val)
+            self.hyperparams.append(val)
