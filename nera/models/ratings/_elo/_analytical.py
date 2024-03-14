@@ -11,7 +11,7 @@ class EloAnalytical(EloModel):
     EloGrad.gamma parameter
     """
 
-    def __init__(self, team_count: int, cd_grad: bool = False, **kwargs):
+    def __init__(self, team_count: int, **kwargs):
         """
         :param team_count: (int) number of teams
         :keyword default: (float) default rating of all teams, default value = 1000.
@@ -20,7 +20,7 @@ class EloAnalytical(EloModel):
         :keyword d: (float) rating meta parameter, default value = 500.
         :keyword k: (float) learning rate, default value = 3.
         """
-        super(EloAnalytical, self).__init__(team_count, cd_grad=cd_grad, **kwargs)
+        super(EloAnalytical, self).__init__(team_count, **kwargs)
 
     def forward(self, matches: Matches):
         self.home, self.away = matches
