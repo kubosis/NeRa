@@ -21,6 +21,15 @@ class BerrarNumerical(BerrarModel):
         super(BerrarNumerical, self).__init__(team_count, **kwargs)
 
     def forward(self, matches: Matches):
-        self.home, self.away = matches
-        E_H = 1 / (1 + torch.pow(self.c, ((self.elo[self.away] - self.elo[self.home]) / self.d)))
-        return E_H
+        h, a = self.home, self.away = matches
+
+        hatt, hdef = self.att_[h], self.def_[h]
+        aatt, adef = self.att_[a], self.def_[a]
+
+        ah, bh, yh = self.alpha_h, self.beta_h, self.bias_h
+        aa, ba, ya = self.alpha_a, self.beta_a, self.bias_a
+
+        ghat_h = torch.tensor([ah / (1 + torch.exp(-bh * (hatt + adef) - yh))]).unsqueeze(0)
+        ghat_a = torch.tensor([aa / (1 + torch.exp(-ba * (aatt + hdef) - ya))]).unsqueeze(0)
+
+        return torch.cat((ghat_h, ghat_a), dim=0)
