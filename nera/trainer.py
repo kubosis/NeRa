@@ -179,8 +179,9 @@ class Trainer:
 
         return [np.array(training_accuracy), np.array(validation_accuracy)]
 
-    def _loss_fn(self, y, y_hat, weight):
+    def _loss_fn(self, y, y_hat, weight=None):
         if isinstance(self.loss_fn, WeightedMSELoss):
+            assert weight is not None
             return self.loss_fn(y, y_hat, weight)
         else:
             return self.loss_fn(y, y_hat)
@@ -217,7 +218,6 @@ class Trainer:
             self.optim.zero_grad()
 
         accuracy, loss_acc = 0, 0
-        mi = 0
         for m in range(matches.shape[1]):
             match = matches[:, m]
 
@@ -243,6 +243,52 @@ class Trainer:
                 continue
 
             if self.model.is_manual:
+                self.model.backward([home_pts, away_pts])
+            else:
+                loss.backward()
+                if clip_grad:
+                    torch.nn.utils.clip_grad_norm_(self.model.hyperparams, max_norm=1)
+                self.optim.step()
+
+        return accuracy, loss_acc
+
+    def train_berrar(self, matches, outcomes, match_points,
+                     validation: bool = False, clip_grad: bool = False, **kwargs) -> tuple[int, float]:
+        if validation:
+            self.model.eval()
+        else:
+            self.model.train()
+
+        if not self.model.is_manual:
+            self.optim.zero_grad()
+
+        accuracy, loss_acc = 0, 0
+        for m in range(matches.shape[1]):
+            match = matches[:, m]
+
+            y_hat = self.model(match)
+            outcome = outcomes[m, :]  # edge weight encodes the match outcome
+
+            target = torch.argmax(outcome) / 2.
+            target = target.detach()
+
+            goal_diff = y_hat[0] - y_hat[1]
+            prediction = 1 / (1 + torch.exp(-goal_diff))
+
+            accuracy += 1 if abs(target - prediction) < 0.5 else 0
+
+            y = match_points[m, :]
+            if not self.model.is_manual:
+                y.requires_grad = True
+
+            loss = self._loss_fn(y, y_hat)
+            loss_acc += loss.item()
+
+            if validation:
+                continue
+
+            if self.model.is_manual:
+                home_pts, away_pts = match_points[m, 0], match_points[m, 1]
                 self.model.backward([home_pts, away_pts])
             else:
                 loss.backward()

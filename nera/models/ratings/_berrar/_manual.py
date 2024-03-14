@@ -41,9 +41,8 @@ class BerrarManual(BerrarModel):
         self.g_h = alpha_h / (1 + torch.exp(-beta_h * (hatt + adef) - bias_h))
         self.g_a = alpha_a / (1 + torch.exp(-beta_a * (aatt + hdef) - bias_a))
 
-        goal_diff = self.g_h - self.g_a
-        pred_home_win = 1 / (1 + torch.exp(-goal_diff))
-        return pred_home_win
+        out = torch.tensor([self.g_h, self.g_a])
+        return out
 
     def backward(self, result: Result):
         goals_home, goals_away = result
