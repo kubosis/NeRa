@@ -56,7 +56,7 @@ class _EloFunction(torch.autograd.Function):
         if ctx.needs_input_grad[2]:
             grad_c = - (rating_diff / (d * c)) * cnst
             grad_c = (grad_output * grad_c)
-        if ctx.needs_output_grad[3]:
+        if ctx.needs_input_grad[3]:
             grad_d = (rating_diff * torch.log(c) / torch.pow(d, 2)) * cnst
             grad_d = (grad_output * grad_d)
 
