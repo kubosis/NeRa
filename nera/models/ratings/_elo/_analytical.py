@@ -18,7 +18,6 @@ class EloAnalytical(EloModel):
         :keyword gamma: (float) impact scale of goal difference, default value = 2.
         :keyword c: (float) rating meta parameter, default value = 3.
         :keyword d: (float) rating meta parameter, default value = 500.
-        :keyword k: (float) learning rate, default value = 3.
         """
         super(EloAnalytical, self).__init__(team_count, **kwargs)
 

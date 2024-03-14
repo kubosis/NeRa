@@ -2,7 +2,26 @@ from ._model import *
 
 
 class BerrarManual(BerrarModel):
+    """
+    Berrar with manual forward and backward pass without gradients
+
+    """
+
     def __init__(self, team_count: int, **kwargs):
+        """
+        :param team_count: number of teams
+        :param team_count: number of teams
+        :keyword alpha_h: expected number of goals by home team, default = 180
+        :keyword beta_h: steepness of exponential for home team, default = 2
+        :keyword bias_h:  bias of home team, default = 0
+        :keyword alpha_a: expected number of goals by away team, default = 180
+        :keyword beta_a: steepness of exponential for away team, default = 2
+        :keyword bias_a: bias of away team, default = 0
+        :keyword lr_h_att: home team's attack strength learning rate, default = 0.1
+        :keyword lr_a_att: away team's attack strength learning rate, default = 0.1
+        :keyword lr_h_def: home team's defensive weakness learning rate, default = 0.1
+        :keyword lr_a_def: away team's defensive weakness learning rate, default = 0.1
+        """
         super(BerrarManual, self).__init__(team_count, **kwargs)
         self.is_manual = True
 
