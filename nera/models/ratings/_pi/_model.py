@@ -24,3 +24,5 @@ class PiModel(_GeneralRating):
         self.ratings = [self.home_rating, self.away_rating]
 
         self.g_a, self.g_h = None, None
+
+        self.type = 'pi'

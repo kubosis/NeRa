@@ -16,7 +16,7 @@ class EloManual(EloModel):
         :keyword d: (float) rating meta parameter, default value = 500.
         :keyword k: (float) learning rate, default value = 3.
         """
-        super(EloManual, self).__init__(team_count, **kwargs)
+        super(EloManual, self).__init__(team_count, register=False, **kwargs)
         self.is_manual = True
 
     def forward(self, matches: Matches):

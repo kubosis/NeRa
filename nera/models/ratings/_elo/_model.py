@@ -17,15 +17,16 @@ class EloModel(_GeneralRating):
         'd': True,
     })
 
-    def __init__(self, team_count: int, register: bool = True, **kwargs):
+    def __init__(self, team_count: int, **kwargs):
         assert isinstance(team_count, int)
 
         super(EloModel, self).__init__(self._params, self._learnable, **kwargs)
 
         default = kwargs.get('default', self._params['default'])
 
-        if register:
-            self.elo = nn.Parameter(torch.full((team_count,), default, dtype=torch.float64))
-            self.ratings = [self.elo]
+        self.elo = nn.Parameter(torch.full((team_count,), default, dtype=torch.float64))
+        self.ratings = [self.elo]
 
         self.E_H = None
+
+        self.type = 'elo'

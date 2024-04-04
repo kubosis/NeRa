@@ -41,8 +41,10 @@ class _BerrarFunction(torch.autograd.Function):
         ghat_h = ah / (1 + torch.exp(-bh * (hatt + adef) - yh))
         ghat_a = aa / (1 + torch.exp(-ba * (aatt + hdef) - ya))
 
-        out = torch.tensor([ghat_h, ghat_a])
-        return out
+        ghat_h = ghat_h.unsqueeze(0).unsqueeze(1)
+        ghat_a = ghat_a.unsqueeze(0).unsqueeze(1)
+
+        return torch.cat((ghat_h, ghat_a), dim=0)
 
     @staticmethod
     def setup_context(ctx, inputs, output):

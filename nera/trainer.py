@@ -153,7 +153,7 @@ class Trainer:
                 if self.model_is_rating:
                     trn_acc_i, trn_loss_i = self._train_rating(matches_train, y_train, match_pts_trn, **kwargs)
                 else:
-                    trn_acc_i, trn_loss_i = self._train_gnn(matches_train, y_train)
+                    trn_acc_i, trn_loss_i = self._train_gnn(matches_train, y_train, match_pts_trn, **kwargs)
                 trn_acc += trn_acc_i
                 trn_loss += trn_loss_i
 
@@ -163,7 +163,7 @@ class Trainer:
                         val_acc_i, val_loss_i = self._train_rating(
                             matches_val, y_val, match_pts_val, validation=True, **kwargs)
                     else:
-                        val_acc_i, val_loss_i = self._train_rating(matches_val, y_val, match_pts_val, validation=True)
+                        val_acc_i, val_loss_i = self._train_gnn(matches_val, y_val, match_pts_val, validation=True)
                 val_acc += val_acc_i
                 val_loss += val_loss_i
 
@@ -186,7 +186,7 @@ class Trainer:
         else:
             return self.loss_fn(y, y_hat)
 
-    def _train_gnn(self, matches, y, validation: bool = False) -> tuple[int, float]:
+    def _train_gnn(self, matches, y, match_pts, validation: bool = False) -> tuple[int, float]:
         if validation:
             self.model.eval()
         else:
@@ -196,7 +196,7 @@ class Trainer:
         target = torch.argmax(y, dim=1)
         prediction = torch.argmax(y_hat, dim=1)
 
-        cost = self.loss_fn(y_hat, target)
+        cost = self.loss_fn(y_hat, y)
         trn_acc = int((prediction.eq(target)).sum().item())
         trn_loss = cost.item()
 
@@ -208,7 +208,16 @@ class Trainer:
 
     def _train_rating(self, matches, outcomes, match_points,
                       validation: bool = False, clip_grad: bool = False, **kwargs) -> tuple[int, float]:
+        if self.model.type == 'elo':
+            return self._train_elo(matches, outcomes, match_points, validation, clip_grad, **kwargs)
+        elif self.model.type == 'berrar':
+            return self._train_berrar(matches, outcomes, match_points, validation, clip_grad, **kwargs)
+        elif self.model.type == 'pi':
+            ...
+        else:
+            raise RuntimeError('Unknown rating model type')
 
+    def _train_elo(self, matches, outcomes, match_points, validation, clip_grad, **kwargs) -> tuple[int, float]:
         if validation:
             self.model.eval()
         else:
@@ -252,8 +261,8 @@ class Trainer:
 
         return accuracy, loss_acc
 
-    def train_berrar(self, matches, outcomes, match_points,
-                     validation: bool = False, clip_grad: bool = False, **kwargs) -> tuple[int, float]:
+    def _train_berrar(self, matches, outcomes, match_points,
+                      validation: bool = False, clip_grad: bool = False, **kwargs) -> tuple[int, float]:
         if validation:
             self.model.eval()
         else:
@@ -273,11 +282,11 @@ class Trainer:
             target = target.detach()
 
             goal_diff = y_hat[0] - y_hat[1]
-            prediction = 1 / (1 + torch.exp(-goal_diff))
+            prediction = 1 if y_hat[0] > y_hat[1] else 0 if y_hat[0] < y_hat[1] else 0.5
 
             accuracy += 1 if abs(target - prediction) < 0.5 else 0
 
-            y = match_points[m, :]
+            y = match_points[m, :].type(torch.float64).view(-1, 1)
             if not self.model.is_manual:
                 y.requires_grad = True
 

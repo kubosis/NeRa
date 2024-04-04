@@ -29,7 +29,10 @@ class BerrarNumerical(BerrarModel):
         ah, bh, yh = self.alpha_h, self.beta_h, self.bias_h
         aa, ba, ya = self.alpha_a, self.beta_a, self.bias_a
 
-        ghat_h = torch.tensor([ah / (1 + torch.exp(-bh * (hatt + adef) - yh))]).unsqueeze(0)
-        ghat_a = torch.tensor([aa / (1 + torch.exp(-ba * (aatt + hdef) - ya))]).unsqueeze(0)
+        ghat_h = ah / (1 + torch.exp(-bh * (hatt + adef) - yh))
+        ghat_a = aa / (1 + torch.exp(-ba * (aatt + hdef) - ya))
 
-        return torch.cat((ghat_h, ghat_a), dim=0)
+        ghat_h = ghat_h.unsqueeze(0)
+        ghat_a = ghat_a.unsqueeze(0)
+
+        return torch.cat((ghat_h, ghat_a), dim=0).view(-1, 1)
