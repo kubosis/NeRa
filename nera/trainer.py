@@ -1,6 +1,7 @@
 from typing import Optional, Sequence
 
 import torch
+from torch import Tensor
 import torch.nn as nn
 from torch_geometric_temporal.signal import temporal_signal_split, DynamicGraphTemporalSignal
 import numpy as np
@@ -127,7 +128,7 @@ class Trainer:
         validation_accuracy = []
 
         for epoch in range(epochs):
-            self.optim.zero_grad()
+
             trn_acc, trn_loss, trn_count = 0, 0, 0
             val_acc, val_loss, val_count = 0, 0, 0
             for time, snapshot in enumerate(self._train_dataset):
@@ -167,6 +168,8 @@ class Trainer:
                 val_acc += val_acc_i
                 val_loss += val_loss_i
 
+                self.model.H = None
+
             if verbose:
                 logger.info(f'[TRN] Epoch: {epoch}, training loss: {trn_loss:.3f}, '
                             f'training accuracy: {trn_acc / trn_count * 100:.2f}%')
@@ -186,25 +189,76 @@ class Trainer:
         else:
             return self.loss_fn(y, y_hat)
 
-    def _train_gnn(self, matches, y, match_pts, validation: bool = False) -> tuple[int, float]:
+    def _create_edge_index_and_weight(self, match, y, validation: bool = False) -> tuple[Tensor, Optional[Tensor]]:
+        assert (len(y) in [2, 3]), "Invalid outcome encoding - only one hot match outcome supported"
+
+        outcome = torch.argmax(y)
+        match = match.unsqueeze(1)
+        weight = None
+        if len(y) == 2:
+            # draws not used -> bidirectional edges
+            index = torch.cat((match, torch.flip(match, dims=[0])), dim=1)
+            if outcome == 0:
+                # away win
+                weight = torch.tensor([1, -1], dtype=torch.float)
+            else:
+                # home win
+                weight = torch.tensor([-1, 1], dtype=torch.float)
+        else:
+            # draws used -> only 1 direction of edges - from looser to winner
+            if outcome == 0:
+                # away win
+                index = torch.flip(match, dims=[0])
+                weight = torch.tensor([1], dtype=torch.float)
+            elif outcome == 1:
+                # draw
+                index = match
+                weight = torch.tensor([.5], dtype=torch.float)
+            else:
+                # home win
+                index = match
+                weight = torch.tensor([1], dtype=torch.float)
+
+        if validation:
+            weight = None
+        return index, weight
+
+    def _train_gnn(self, matches, outcomes, match_points, validation: bool = False,
+                   clip_grad: bool = False) -> tuple[int, float]:
         if validation:
             self.model.eval()
         else:
             self.model.train()
 
-        y_hat = self.model(matches)
-        target = torch.argmax(y, dim=1)
-        prediction = torch.argmax(y_hat, dim=1)
+        accuracy, loss_acc = 0, 0
+        for m in range(matches.shape[1]):
+            self.optim.zero_grad()
+            home, away = match = matches[:, m]
+            y = outcomes[m, :]
+            edge_index, edge_weight = self._create_edge_index_and_weight(match, y)
+            y_hat = self.model(edge_index, home, away, edge_weight)
 
-        cost = self.loss_fn(y_hat, y)
-        trn_acc = int((prediction.eq(target)).sum().item())
-        trn_loss = cost.item()
+            y.requires_grad = True
 
-        if not validation:
-            cost.backward()
+            target = torch.argmax(y) / 2.
+            target = target.detach()
+            prediction = torch.argmax(y_hat) / 2.
+            prediction = prediction.detach()
+
+            accuracy += 1 if abs(target - prediction) < 0.5 else 0
+
+            loss = self._loss_fn(y, y_hat)
+            loss_acc += loss.item()
+
+            if validation:
+                continue
+
+            loss.backward()
+            if clip_grad:
+                torch.nn.utils.clip_grad_norm_(self.model.hyperparams, max_norm=1)
             self.optim.step()
 
-        return trn_acc, trn_loss
+        return accuracy, loss_acc
 
     def _train_rating(self, matches, outcomes, match_points,
                       validation: bool = False, clip_grad: bool = False, **kwargs) -> tuple[int, float]:

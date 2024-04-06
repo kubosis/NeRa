@@ -29,7 +29,7 @@ class DataTransformation:
         self.snapshot_count = int(np.ceil((self.end_date - self.start_date) / self.delta))
 
     def _create_teams_mapping(self) -> None:
-        teams = pd.concat([self.df['Home'], self.df['Away']], axis=0).unique()
+        teams = np.sort(pd.concat([self.df['Home'], self.df['Away']], axis=0).unique())
         team_ids = list(range(len(teams)))
         self.team_mapping = dict(zip(teams, team_ids))
         self.teams = list(teams)
@@ -40,10 +40,16 @@ class DataTransformation:
         self.df['Away'] = self.df['Away'].map(self.team_mapping)
         self.df['Home'] = self.df['Home'].map(self.team_mapping)
 
-    def _map_match_outcomes(self, verbose: bool) -> None:
-        self.df.loc[self.df['Winner'] == 'home', 'Winner'] = 2
-        self.df.loc[self.df['Winner'] == 'away', 'Winner'] = 0
-        self.df.loc[self.df['Winner'] == 'draw', 'Winner'] = 1
+    def _map_match_outcomes(self, verbose: bool, drop_draws: bool) -> None:
+        if drop_draws:
+            self.df.drop(self.df[self.df['Winner'] == 'draw'].index, inplace=True)
+            self.df.loc[self.df['Winner'] == 'home', 'Winner'] = 1
+            self.df.loc[self.df['Winner'] == 'away', 'Winner'] = 0
+        else:
+            self.df.loc[self.df['Winner'] == 'home', 'Winner'] = 2
+            self.df.loc[self.df['Winner'] == 'away', 'Winner'] = 0
+            self.df.loc[self.df['Winner'] == 'draw', 'Winner'] = 1
+
         if verbose:
             logger.info(f"There are {len(self.df.loc[self.df['Winner'] == 2])} home wins, "
                         f"{len(self.df.loc[self.df['Winner'] == 1])} draws and "
@@ -121,7 +127,7 @@ class DataTransformation:
 
         return node_features
 
-    def _extract_dynamic_edges_and_labels(self, one_hot: bool) \
+    def _extract_dynamic_edges_and_labels(self, one_hot: bool, use_draws: bool=False) \
             -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
         """ extract dynamically changing edges and their features """
         delta = self.delta
@@ -134,6 +140,7 @@ class DataTransformation:
 
         leagues = self.df['League'].unique()
 
+        one_hot_dim = 3 if use_draws else 2
         last_df_i = None
         for _ in range(self.snapshot_count):
             df_i = self.df[((self.df['DT'] >= start_date) & (self.df['DT'] < start_date + delta))]
@@ -146,7 +153,7 @@ class DataTransformation:
 
             match_outcomes = df_i.loc[:, ['Winner']].values.astype(int)
             if one_hot:
-                match_outcomes = np.apply_along_axis(lambda x: one_hot_encode(x[0], 3), 1, match_outcomes)
+                match_outcomes = np.apply_along_axis(lambda x: one_hot_encode(x[0], one_hot_dim), 1, match_outcomes)
             else:
                 match_outcomes = normalize_array(match_outcomes)
             edge_features.append(match_outcomes)
@@ -176,7 +183,7 @@ class DataTransformation:
         return edges, edge_features, labels, match_points
 
     def get_dataset(self, node_f_extract: bool = False, node_f_discount: float = 0.75, node_f_draws: bool = False,
-                    edge_f_one_hot: bool = False, verbose: bool = False) -> DynamicGraphTemporalSignal:
+                    edge_f_one_hot: bool = False, verbose: bool = False, drop_draws: bool = False) -> DynamicGraphTemporalSignal:
         """ transform dataframe into dataset used by PyTorch Geometric
             after transformation, mapping of the teams to unique ids is saved to self.mapping
             the transformation is destructive for the original dataframe
@@ -194,7 +201,7 @@ class DataTransformation:
         self._create_teams_mapping()
 
         # 2) map match outcomes to integers (win home = 0; win away = 2; draw = 1)
-        self._map_match_outcomes(verbose)
+        self._map_match_outcomes(verbose, drop_draws)
 
         # 3) extract node features (optional, may not be used at all)
         if node_f_extract:
@@ -203,7 +210,8 @@ class DataTransformation:
             node_features = [None for _ in range(self.snapshot_count)]
 
         # 4) extract edges and edge features
-        edges, edge_features, labels, match_points = self._extract_dynamic_edges_and_labels(edge_f_one_hot)
+        use_draws = not drop_draws
+        edges, edge_features, labels, match_points = self._extract_dynamic_edges_and_labels(edge_f_one_hot, use_draws)
 
         # 5) create PyTorch Geometric Temporal dataset
         dynamic_graph = DynamicGraphTemporalSignal(
