@@ -1,12 +1,12 @@
 # scripts for easier manipulation
 import torch
-import pandas as pd
 from datetime import timedelta
-from datetime import datetime
+from itertools import product
 
 import numpy as np
 
 from nera.data import *
+from nera.dummy import get_dummy_df, Dummy
 from nera.models.ratings import EloAnalytical, EloManual, EloNumerical, EloSymbolical
 from nera.reference import *
 from nera.models.gnn import GCONVCheb, RGNN
@@ -30,70 +30,71 @@ def eval_symbolic_elo(transform):
     print(elo_sym.elo[:5])
     print(acc_sym)
 
+
 def eval_gnn(transform):
     dataset = transform.get_dataset(node_f_extract=False, edge_f_one_hot=True)
     team_count = transform.num_teams
 
     gnn = GCONVCheb(team_count=team_count, embed_dim=100)
-    trainer = Trainer(dataset, gnn, loss_fn=torch.nn.CrossEntropyLoss)
+    trainer = Trainer(dataset, gnn, loss_fn=torch.nn.CrossEntropyLoss, lr=0.1)
     trainer.train_ratio = 1
     acc_sym = trainer.train(epochs=500, val_ratio=0, verbose=True)
     trainer.test(verbose=True)
 
 
-def simple_gnn_test(transform):
+def simple_gnn_test(transform, verbose=False):
     dataset = transform.get_dataset(node_f_extract=False, edge_f_one_hot=True, drop_draws=True)
     team_count = transform.num_teams
 
-    gnn = RGNN(team_count=team_count, embed_dim=1, conv_out_channels=8, debug=True, K=1, target_dim=2)
-    trainer = Trainer(dataset, gnn, loss_fn=torch.nn.CrossEntropyLoss, lr=0.01)
+    gnn = RGNN(team_count=team_count, embed_dim=1, conv_out_channels=1, debug=True, K=2,
+               target_dim=2, init_ones_=True, bias=True, dense_dims=(1,), normalization="sym",
+               graph_conv='GCONV_ELMAN')
+    trainer = Trainer(dataset, gnn, loss_fn=torch.nn.CrossEntropyLoss, lr=0.0005, optim=torch.optim.Adam)
     trainer.train_ratio = 1
-    _ = trainer.train(epochs=1, val_ratio=0, verbose=True)
+    _ = trainer.train(epochs=1, val_ratio=0, verbose=verbose, bidir=False)
     h = torch.tensor(list(range(gnn.team_count)))
     h = gnn.embedding[h].reshape(-1, gnn.embed_dim)
     gnn.embedding_progression.append(h.clone().detach().numpy())
+    progression = np.array(gnn.embedding_progression).reshape(-1, 4)
     #embedding_progression = pd.DataFrame(np.array(gnn.embedding_progression).reshape(4, -1), columns=['A', 'B', 'C', 'D'])
-    print(f'Embedding progression\n{np.array(gnn.embedding_progression).reshape(-1, 4)}\n--------------------')
+
+    delta = np.zeros((progression.shape[0] - 1, progression.shape[1]))
+    for i in range(progression.shape[0] - 1):
+        delta[i, :] = - progression[i, :] + progression[i + 1, :]
+
+    print(
+        f'Embedding progression\n{progression}\ndelta (scaled 1000 times):\n{np.around(1000 * delta, decimals=4)}\n--------------------')
 
 
-def _dummy0():
-    delta = timedelta(days=1)
-    now = datetime.now()
-    data = pd.DataFrame({'DT': [*[now + j * delta for j in range(3)]],
-                         'Home': ['A', 'B', 'D'],
-                         'Away': ['B', 'C', 'C'],
-                         'Winner': ['home', 'home', 'away',],
-                         'Home_points': [10, 11, 20],
-                         'Away_points': [4, 10, 17,],
-                         'League': [*(3 * ['liga'])],
-                         })
-    return data
+def test_dummy_id_all(dummy_id=0, conf_len=3, conf_chars='ha', verbose=False):
+    for config in product(conf_chars, repeat=conf_len):
+        print(f'config: {config}')
+        config = ''.join(config)
+        dummy = get_dummy_df(dummy_id, conf=config)
+        transform = DataTransformation(dummy, timedelta(days=365))
+        simple_gnn_test(transform, verbose=verbose)
 
-def _dummy1():
-    delta = timedelta(days=1)
-    now = datetime.now()
-    data = pd.DataFrame({'DT': [*[now + j * delta for j in range(4)]],
-                         'Home': ['A', 'B', 'D', 'D'],
-                         'Away': ['B', 'C', 'C', 'A'],
-                         'Winner': ['home', 'home', 'away', 'home'],
-                         'Home_points': [10, 11, 20, 20],
-                         'Away_points': [4, 10, 17, 15],
-                         'League': [*(4 * ['liga'])],
-                         })
-    return data
 
-def get_dummy_df(id=0):
-    # dummy dataset
-    if id == 0:
-        return _dummy0()
-    elif id == 1:
-        return _dummy1()
+def test_dummy_generate_all(match_count=3, team_count=4, conf_chars='ha', verbose=False):
+    for config in product(conf_chars, repeat=match_count):
+        print(f'config: {config}')
+        config = ''.join(config)
+        dummy = Dummy.generate_dummy(match_count, team_count, conf=config)
+        transform = DataTransformation(dummy, timedelta(days=365))
+        simple_gnn_test(transform, verbose=verbose)
+
+
+def test_dummy_id_one(dummy_id=0, conf='hhh', verbose=True):
+    dummy = get_dummy_df(dummy_id, conf=conf)
+    transform = DataTransformation(dummy, timedelta(days=365))
+    simple_gnn_test(transform, verbose=verbose)
+    print("Config: ", tuple(conf))
+
 
 def main():
-    torch.manual_seed(42)
-    dummy = get_dummy_df(0)
-    transform = DataTransformation(dummy, timedelta(days=365))
-    simple_gnn_test(transform)
+    #torch.manual_seed(42)
+    test_dummy_id_one()
+    #test_dummy_id_all()
 
 
 if __name__ == '__main__':
