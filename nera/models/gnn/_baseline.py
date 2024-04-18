@@ -89,7 +89,7 @@ class RGNN(RecurrentGNN):
 
         if init_ones_:
             nn.init.eye_(self.pred.weight)
-            if self.lin.bias is not None:
+            if self.pred.bias is not None:
                 nn.init.zeros_(self.pred.bias)
 
         self.out_layer = nn.Softmax(dim=0)

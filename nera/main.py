@@ -72,7 +72,7 @@ def simple_gnn_test(transform, verbose=False, **kwargs):
                graph_conv='GCONV_ELMAN', discount=0.8, aggr='add')
     trainer = Trainer(dataset, gnn, loss_fn=torch.nn.CrossEntropyLoss(), lr=0.01, lr_rating=1)
     trainer.train_ratio = 1
-    _ = trainer.train(epochs=1, val_ratio=0, verbose=verbose, bidir=True)
+    _ = trainer.train(epochs=10, val_ratio=0, verbose=verbose, bidir=True)
     print_embedding_progression(gnn, trainer, team_count, verbose)
 
 
@@ -86,7 +86,7 @@ def gnn_rating_test(transform, rating='elo', verbose=False):
 
     rnn_gconv = GConvElman(in_channels=1, hidden_channels=1, out_channels=1, aggr='add', bias=True, init_ones_=True)
     if rating == 'elo':
-        rating = Elo(d=1., hp_grad=True)
+        rating = Elo(d=0.8, hp_grad=True)
     elif rating == 'berrar':
         rating = Elo(d=1., hp_grad=True)
     else:
@@ -96,7 +96,7 @@ def gnn_rating_test(transform, rating='elo', verbose=False):
                       discount=0.9, debug=True)
 
     trainer = Trainer(dataset, model, loss_fn=torch.nn.CrossEntropyLoss(), lr=0.01, lr_rating=1, train_ratio=1)
-    _ = trainer.train(epochs=1, val_ratio=0, verbose=verbose, bidir=True)
+    _ = trainer.train(epochs=10, val_ratio=0, verbose=verbose, bidir=True)
     print_embedding_progression(model, trainer, team_count, verbose)
 
 
@@ -127,8 +127,8 @@ def test_dummy_id_one(test_fn=simple_gnn_test, dummy_id=0, conf='hhh', verbose=T
 
 def main():
     #torch.manual_seed(42)
-    #test_dummy_id_one(test_fn=gnn_rating_test, verbose=True, conf='hhh', dummy_id=0)
-    test_dummy_id_all(test_fn=gnn_rating_test, rating='elo', verbose=False)
+    test_dummy_id_one(test_fn=gnn_rating_test, rating='elo', verbose=True, conf='hhh', dummy_id=0)
+    #test_dummy_id_all(test_fn=simple_gnn_test, rating='elo', verbose=True)
 
 
 if __name__ == '__main__':
