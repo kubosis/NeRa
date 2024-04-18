@@ -16,7 +16,7 @@ class Trainer:
     """
 
     def __init__(self, dataset: Optional[DynamicGraphTemporalSignal] = None, model: Optional[nn.Module] = None,
-                 lr: float = .001, lr_rating: float = 3., loss_fn=WeightedMSELoss, train_ratio: float = 0.8,
+                 lr: float = .001, lr_rating: float = 3., loss_fn=WeightedMSELoss(), train_ratio: float = 0.8,
                  optim=torch.optim.Adam, **kwargs):
 
         self._train_dataset, self._test_dataset = None, None
@@ -37,7 +37,7 @@ class Trainer:
         else:
             self._model = None
 
-        self.loss_fn = loss_fn()
+        self.loss_fn = loss_fn
 
     @property
     def model(self) -> nn.Module:
@@ -63,7 +63,11 @@ class Trainer:
                 self.optim = torch.optim.SGD(model.ratings, self._lr_rating)
         else:
             self.model_is_rating = False
-            self.optim = self.optim(model.parameters(), lr=self._lr)
+            self.optim = torch.optim.SGD([
+                {'params': model.embedding, 'lr': self._lr_rating},
+                {'params': model.rnn_gconv.parameters(), 'lr': self._lr},
+                {'params': model.lin.parameters()},
+            ], lr=self._lr)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(device)
@@ -186,9 +190,9 @@ class Trainer:
     def _loss_fn(self, y, y_hat, weight=None):
         if isinstance(self.loss_fn, WeightedMSELoss):
             assert weight is not None
-            return self.loss_fn(y, y_hat, weight)
+            return self.loss_fn(y_hat, y, weight)
         else:
-            return self.loss_fn(y, y_hat)
+            return self.loss_fn(y_hat, y)
 
     def _create_edge_index_and_weight(self, match, y, validation: bool = False, bidir: bool=True) -> tuple[Tensor, Optional[Tensor]]:
         assert (len(y) in [2, 3]), "Invalid outcome encoding - only one hot match outcome supported"
@@ -197,40 +201,48 @@ class Trainer:
         match = match.unsqueeze(1)
         weight = None
         if len(y) == 2:
-            # draws not used -> bidirectional edges
-            if bidir:
-                index = torch.cat((match, torch.flip(match, dims=[0])), dim=1)
+            # draws not used -> bidirectional edges possible
             if outcome == 0:
                 # away win
                 if bidir:
-                    weight = torch.tensor([1, -1], dtype=torch.float)
+                    index = torch.cat((match, torch.flip(match, dims=[0])), dim=1)
+                    weight = torch.tensor([+1, -1], dtype=torch.float)
                 else:
-                    index = torch.flip(match, dims=[0])
-                #weight = torch.tensor([-1], dtype=torch.float)
+                    index = match
+                    weight = torch.tensor([1.], dtype=torch.float)
             else:
                 # home win
                 if bidir:
-                    weight = torch.tensor([-1, 1], dtype=torch.float)
+                    index = torch.cat((match, torch.flip(match, dims=[0])), dim=1)
+                    weight = torch.tensor([-1, +1], dtype=torch.float)
                 else:
-                    index = match
-                #weight = torch.tensor([-1], dtype=torch.float)
+                    index = torch.flip(match, dims=[0])
+                    weight = torch.tensor([1.], dtype=torch.float)
         else:
             # draws used -> only 1 direction of edges - from looser to winner
             if outcome == 0:
                 # away win
-                index = torch.flip(match, dims=[0])
+                index = match
             elif outcome == 1:
                 # draw
                 index = torch.cat((match, torch.flip(match, dims=[0])), dim=1)
                 weight = torch.tensor([.5, .5], dtype=torch.float)
             else:
                 # home win
-                index = match
+                index = torch.flip(match, dims=[0])
                 weight = torch.tensor([1], dtype=torch.float)
 
         if validation:
             weight = None
-        return index, weight
+        return index, weight * 0.1
+
+    def _step(self):
+        for p in self.model.lin.parameters():
+            p.data.add_(p.grad.data, alpha=-self._lr)
+        for p in self.model.rnn_gconv.parameters():
+            p.data.add_(p.grad.data, alpha=-self._lr)
+
+        self.model.embedding.data.add_(self.model.embedding.grad.data, alpha=-self._lr_rating)
 
     def _train_gnn(self, matches, outcomes, match_points, verbose, validation: bool = False,
                    clip_grad: bool = False, bidir: bool=False) -> tuple[int, float]:
@@ -238,35 +250,39 @@ class Trainer:
             self.model.eval()
         else:
             self.model.train()
+
+        self.model.reset_index()
+
         ite = 0
         accuracy, loss_acc = 0, 0
         for m in range(matches.shape[1]):
+            self.optim.zero_grad()
 
             home, away = match = matches[:, m]
             y = outcomes[m, :]
             edge_index, edge_weight = self._create_edge_index_and_weight(match, y, validation, bidir=bidir)
 
-            self.optim.zero_grad()
+
             y_hat = self.model(edge_index, home, away, edge_weight)
 
-            y.requires_grad = True
+            #y.requires_grad = True
 
             target = torch.argmax(y) / 2.
-            target = target.detach()
             prediction = torch.argmax(y_hat) / 2.
-            prediction = prediction.detach()
 
             accuracy += 1 if abs(target - prediction) < 0.5 else 0
 
             loss = self._loss_fn(y, y_hat)
+            loss.retains_grad_ = True
             loss_acc += loss.item()
 
             if validation:
                 continue
 
             loss.backward()
-            if verbose:
+            if verbose and False:
                 print("Iteration ------------------------------------ ", ite)
+                #print(f"Loss gradient: {loss.grad:.4f}")
                 for name, param in self.model.named_parameters():
                     print(f"Gradient of {name}: {param.grad}")
                 print("\n")
@@ -275,6 +291,8 @@ class Trainer:
             if clip_grad:
                 torch.nn.utils.clip_grad_norm_(self.model.hyperparams, max_norm=1)
             self.optim.step()
+            #self._step()
+
 
         return accuracy, loss_acc
 

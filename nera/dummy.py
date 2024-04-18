@@ -4,11 +4,12 @@ import pandas as pd
 
 
 class Dummy:
-    id_list = [0, 1]
+    id_list = [0, 1, 2]
 
     conf_len = {
         0: 3,
-        1: 4,
+        1: 3,
+        2: 3,
     }
 
     @staticmethod
@@ -45,19 +46,36 @@ class Dummy:
         return data
 
     @staticmethod
-    def _dummy2(conf: str = "hhhh"):
-        assert len(conf) == 4
+    def _dummy1(conf: str = "hhh"):
+        assert len(conf) == 3
 
         winner, home_pts, away_pts = Dummy._resolve_conf(conf)
         delta = timedelta(days=1)
         now = datetime.now()
-        data = pd.DataFrame({'DT': [*[now + j * delta for j in range(4)]],
-                             'Home': ['A', 'B', 'C', 'D'],
-                             'Away': ['B', 'C', 'D', 'A'],
+        data = pd.DataFrame({'DT': [*[now + j * delta for j in range(3)]],
+                             'Home': ['A', 'B', 'C',],
+                             'Away': ['B', 'C', 'A',],
                              'Winner': winner,
                              'Home_points': home_pts,
                              'Away_points': away_pts,
-                             'League': [*(4 * ['liga'])],
+                             'League': [*(3 * ['liga'])],
+                             })
+        return data
+
+    @staticmethod
+    def _dummy2(conf: str = "hhh"):
+        assert len(conf) == 3
+
+        winner, home_pts, away_pts = Dummy._resolve_conf(conf)
+        delta = timedelta(days=1)
+        now = datetime.now()
+        data = pd.DataFrame({'DT': [*[now + j * delta for j in range(3)]],
+                             'Home': ['A', 'A', 'B',],
+                             'Away': ['B', 'C', 'C',],
+                             'Winner': winner,
+                             'Home_points': home_pts,
+                             'Away_points': away_pts,
+                             'League': [*(3 * ['liga'])],
                              })
         return data
 

@@ -1,4 +1,4 @@
-# file copied from torch_geometric.nn and slightly modified
+# file copied from torch_geometric.nn and slightly modified (so that we can init all submodule weights to ones)
 
 import torch
 from torch import nn

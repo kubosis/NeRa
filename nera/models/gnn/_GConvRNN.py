@@ -32,10 +32,8 @@ class GConvElman(torch.nn.Module):
             hidden_channels: int = -1,
             aggr: str = "add",
             bias: bool = True,
-            discount: float = 1.,
             init_ones_: bool = True,
     ):
-        assert 0 <= discount <= 1
         super(GConvElman, self).__init__()
 
         self.in_channels = in_channels
@@ -43,11 +41,8 @@ class GConvElman(torch.nn.Module):
         self.hidden_channels = hidden_channels if hidden_channels > 0 else out_channels
         self.aggr = aggr
         self.bias = bias
-        self.discount = discount
         self.first_call = True
         self.H = None
-        self.H_edge_index = None
-        self.H_edge_weight = None
         self._create_conv_layers(init_ones_=init_ones_)
 
     def _create_conv_layers(self, init_ones_):
@@ -100,44 +95,24 @@ class GConvElman(torch.nn.Module):
 
     def _set_hidden_state(self, X):
         if self.H is None:
-            return torch.ones(X.shape[0], self.out_channels).to(X.device).float()
+            return torch.zeros(X.shape[0], self.out_channels).to(X.device).float()
         return self.H
 
     def _calculate_ht(self, X, edge_index, edge_weight, H):
         Whx_g_xt = self.conv_whx_x(X, edge_index, edge_weight)
-        Whh_g_hts1 = self.conv_whh_hs1(H, self.H_edge_index, self.H_edge_weight) if not self.first_call else 0
-        #Whh_g_hts1 = self.conv_whh_hs1(H, edge_index, edge_weight) #if not self.first_call else 0
+        #Whh_g_hts1 = self.conv_whh_hs1(H, self.H_edge_index, self.H_edge_weight)
+        Whh_g_hts1 = self.conv_whh_hs1(H, edge_index, edge_weight)
         H = torch.sigmoid(Whx_g_xt + Whh_g_hts1)
         return H
 
     def _calculate_yt(self, H, edge_index, edge_weight):
-        yt = Wy_g_ht = self.conv_wy_y(H, edge_index, edge_weight)
+        Wy_g_ht = self.conv_wy_y(H, edge_index, edge_weight)
         yt = torch.sigmoid(Wy_g_ht)
         return yt
 
     def _copy_hidden(self, ht):
         self.H = ht.detach().clone()
         self.H.requires_grad_(True)
-
-    def _copy_index(self, edge_index, edge_weight):
-        new_edge_index = edge_index.detach().clone()
-        if self.H_edge_index is None:
-            self.H_edge_index = new_edge_index
-        else:
-            self.H_edge_index = torch.cat([new_edge_index, self.H_edge_index], dim=1)
-
-        if edge_weight is None:
-            new_edge_weight = torch.ones_like(edge_index[0, :]).detach().to(torch.float)
-        else:
-            new_edge_weight = edge_weight.detach().clone().to(torch.float)
-        if self.H_edge_weight is None:
-            self.H_edge_weight = new_edge_weight
-        else:
-            self.H_edge_weight = torch.cat([new_edge_weight, self.H_edge_weight], dim=0)
-
-        self.H_edge_weight *= self.discount
-
-
 
     def forward(
             self,
@@ -164,11 +139,7 @@ class GConvElman(torch.nn.Module):
 
         # copy hidden state for next iter
         self._copy_hidden(H)
-        self._copy_index(edge_index, edge_weight)
 
-        yt = self._calculate_yt(H, edge_index, edge_weight)# if not self.first_call else H
-        #yt = self._calculate_yt(H, self.H_edge_index, self.H_edge_weight)
+        yt = self._calculate_yt(H, edge_index, edge_weight)
 
-        self.first_call = False
-        #yt = self._calculate_yt(H, edge_index, edge_weight)
         return yt
