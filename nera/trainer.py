@@ -66,7 +66,7 @@ class Trainer:
             self.optim = torch.optim.SGD([
                 {'params': model.embedding, 'lr': self._lr_rating},
                 {'params': model.rnn_gconv.parameters(), 'lr': self._lr},
-                {'params': model.lin.parameters()},
+                {'params': model.pred.parameters()},
             ], lr=self._lr)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -176,10 +176,10 @@ class Trainer:
                 self.model.H = None
 
             if verbose:
-                logger.info(f'[TRN] Epoch: {epoch}, training loss: {trn_loss:.3f}, '
+                logger.info(f'[TRN] Epoch: {epoch+1}, training loss: {trn_loss:.3f}, '
                             f'training accuracy: {trn_acc / trn_count * 100:.2f}%')
                 if val_count != 0:
-                    logger.info(f'[VAL] Epoch: {epoch}, validation loss: {val_loss:.3f}, '
+                    logger.info(f'[VAL] Epoch: {epoch+1}, validation loss: {val_loss:.3f}, '
                                 f'validation accuracy: {val_acc / val_count * 100:.2f}%')
             training_accuracy.append(trn_acc / trn_count)
             if val_count != 0:
