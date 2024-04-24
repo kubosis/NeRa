@@ -20,20 +20,31 @@ class Elo(nn.Module):
         :param d: (float) rating meta parameter, default value = 5.
         :param hp_grad: (bool) whether to use gradient descend for ratings hyperparams
         """
+        assert in_channels > 0
+
         super(Elo, self).__init__()
         self.gamma = gamma
         self.in_channels = in_channels
         if not hp_grad:
             self.c = c
-            self.d = torch.full((in_channels,), d, dtype=torch.float)
+            self.d = d
         else:
-            self.c = nn.Parameter(torch.tensor(c), requires_grad=True)
-            self.d = nn.Parameter(torch.tensor(torch.full((in_channels,), d, dtype=torch.float)), requires_grad=True)
+            self.c = nn.Parameter(torch.tensor(c, dtype=torch.float), requires_grad=True)
+            self.d = nn.Parameter(torch.tensor(d, dtype=torch.float), requires_grad=True)
+
+        if in_channels > 1:
+            # flatten elo with learnable weights if more than one in-channel present
+            self.lin = nn.Linear(in_features=in_channels, out_features=1)
+        else:
+            self.lin = None
 
     def forward(self, home, away):
         assert home.shape == away.shape
         assert len(home) == self.in_channels
 
-        E_H = 1 / (1 + torch.pow(self.c, ((away - home) @ torch.pow(self.d, -1)))).unsqueeze(0)
+        E_H = 1 / (1 + torch.pow(self.c, ((away - home) / self.d)))
+        if self.lin is not None:
+            E_H = self.lin(E_H)
+
         E_A = 1 - E_H
         return torch.cat([E_A, E_H], dim=0)
