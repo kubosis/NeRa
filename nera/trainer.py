@@ -39,6 +39,13 @@ class Trainer:
 
         self.loss_fn = loss_fn
 
+        self.val_accuracy = 0
+        self.val_loss = float('inf')
+        self.train_accuracy = 0
+        self.train_loss = float('inf')
+        self.test_accuracy = 0
+        self.test_loss = float('inf')
+
     @property
     def model(self) -> nn.Module:
         return self._model
@@ -64,7 +71,7 @@ class Trainer:
         else:
             self.model_is_rating = False
             self.optim = torch.optim.SGD([
-                {'params': model.embedding, 'lr': self._lr_rating},
+                {'params': model.embedding.parameters(), 'lr': self._lr_rating},
                 {'params': model.rnn_gconv.parameters(), 'lr': self._lr},
                 {'params': model.pred.parameters()},
             ], lr=self._lr)
@@ -431,3 +438,7 @@ class Trainer:
         correct = torch.sum(torch.abs(target - y_hat) < 0.5).item()
         count = len(y_hat)
         return correct, count
+
+    def get_eval_metric(self, metric: str = 'val_acc'):
+        assert metric in ['val_accuracy', 'test_accuracy', 'val_loss', 'test_loss', 'train_loss', 'train_accuracy']
+        return getattr(self, metric)

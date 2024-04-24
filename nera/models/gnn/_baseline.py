@@ -3,6 +3,7 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
+from torch_geometric.nn import GraphConv
 
 from ._GConvRNN import GConvElman
 from ._gconv_gru_copy import GConvGRU
@@ -33,6 +34,7 @@ class RGNN(RecurrentGNN):
                  normalization: Optional[str] = 'sym',
                  discount: float = 0.5,
                  aggr: str = 'add',
+                 correction: bool = True,
                  debug=False):
 
         """
@@ -62,9 +64,9 @@ class RGNN(RecurrentGNN):
         """
 
         assert K > 0
-        assert graph_conv.upper() in ['GCONV_GRU', 'GCONV_ELMAN', ]
+        assert graph_conv.upper() in ['GCONV_GRU', 'GCONV_ELMAN', 'PEREVERZEVA_RGNN']
 
-        super(RGNN, self).__init__(discount, debug)
+        super(RGNN, self).__init__(discount, debug, correction)
 
         self.team_count = team_count
         self.act_fn = self._activations[activation]
@@ -77,6 +79,15 @@ class RGNN(RecurrentGNN):
         if graph_conv.upper() == 'GCONV_ELMAN':
             gconv = GConvElman(in_channels, conv_out_channels,
                                aggr=aggr, init_ones_=init_ones_, bias=bias, hidden_channels=conv_hidden_channels)
+        elif graph_conv.upper() == 'PEREVERZEVA_RGNN':
+            gconv = GraphConv(in_channels, conv_out_channels, bias=bias, aggr=aggr,)
+            if init_ones_:
+                nn.init.ones_(gconv.lin_rel.weight)
+                nn.init.ones_(gconv.lin_root.weight)
+                if gconv.lin_rel.bias is not None:
+                    nn.init.zeros_(gconv.lin_rel.bias)
+                if gconv.lin_root.bias is not None:
+                    nn.init.zeros_(gconv.lin_root.bias)
         else:
             #graph_conv.upper() == 'GCONV_GRU':
             gconv = GConvGRU(in_channels, conv_out_channels, K, bias=bias,
@@ -85,7 +96,7 @@ class RGNN(RecurrentGNN):
         self.rnn_gconv = gconv
 
         # simple fully connected part for prediction
-        self.pred = nn.Linear(2 * conv_out_channels, out_channels)
+        self.pred = nn.Linear(2 * conv_out_channels, out_channels, bias=bias)
 
         if init_ones_:
             nn.init.eye_(self.pred.weight)

@@ -5,7 +5,7 @@ from abc import abstractmethod
 
 
 class RecurrentGNN(nn.Module):
-    def __init__(self, discount: float, debug: bool):
+    def __init__(self, discount: float, debug: bool, correction: bool):
 
         """
         Basic nn.Module implementation for saving the recurrent GNN model edges and edge weights
@@ -16,6 +16,7 @@ class RecurrentGNN(nn.Module):
         super(RecurrentGNN, self).__init__()
 
         self.discount = discount
+        self.correction = correction
 
         self.H_edge_index = None
         self.H_edge_weight = None
@@ -37,7 +38,8 @@ class RecurrentGNN(nn.Module):
         else:
             self.H_edge_weight *= self.discount
             # weight correction
-            self.H_edge_weight[-2:] = torch.abs(self.H_edge_weight[-2:])
+            if self.correction:
+                self.H_edge_weight[-2:] = torch.abs(self.H_edge_weight[-2:])
             self.H_edge_weight = torch.cat([self.H_edge_weight, new_edge_weight])
 
         new_edge_index = edge_index.detach().clone()

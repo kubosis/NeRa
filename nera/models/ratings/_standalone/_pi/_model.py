@@ -1,5 +1,5 @@
-from nera.models.ratings._standalone._general_rating import _GeneralRating
-from nera.models.ratings._standalone._general_rating import *
+from nera.models.ratings._general_rating import _GeneralRating
+from nera.models.ratings._general_rating import *
 
 
 class PiModel(_GeneralRating):

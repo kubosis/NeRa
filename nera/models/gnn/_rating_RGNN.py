@@ -26,6 +26,7 @@ class RatingGNN(RecurrentGNN):
                  rating: nn.Module,
                  discount: float = 0.5,
                  default: float = 1.0,
+                 correction: bool = False,
                  debug: bool = False,
                  ):
 
@@ -44,7 +45,7 @@ class RatingGNN(RecurrentGNN):
 
         """
 
-        super(RatingGNN, self).__init__(discount, debug)
+        super(RatingGNN, self).__init__(discount, debug, correction)
 
         self.H_edge_index = None
         self.H_edge_weight = None
@@ -52,8 +53,9 @@ class RatingGNN(RecurrentGNN):
         self.team_count = team_count
 
         self.embed_dim = embed_dim
-        self.embedding = nn.Parameter(torch.full((team_count, embed_dim), default, dtype=torch.float))
-        #self.embedding = nn.Embedding(num_embeddings=team_count, embedding_dim=embed_dim)
+        #self.embedding = nn.Parameter(torch.full((team_count, embed_dim), default, dtype=torch.float))
+        self.embedding = nn.Embedding(num_embeddings=team_count, embedding_dim=embed_dim, dtype=torch.float)
+        nn.init.ones_(self.embedding.weight)
 
         # recurrent graph convolution layer
         self.rnn_gconv = rnn_gconv
@@ -63,14 +65,14 @@ class RatingGNN(RecurrentGNN):
 
     def forward(self, edge_index, home, away, edge_weight=None):
         h = torch.tensor(list(range(self.team_count)))
-        h = self.embedding[h].reshape(-1, self.embed_dim)
+        h = self.embedding(h).reshape(-1, self.embed_dim)
 
         # graph convolution
         self._copy_index(edge_index, edge_weight, h)
         h = self.rnn_gconv(h, self.H_edge_index, self.H_edge_weight)
 
         # prediction
-        away, home = h[away], h[home]
-        h = self.pred(away, home)
+        home, away = h[home], h[away]
+        h = self.pred(home, away)
 
         return h

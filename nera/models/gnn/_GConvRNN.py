@@ -51,7 +51,7 @@ class GConvElman(torch.nn.Module):
             out_channels=self.hidden_channels,
             bias=self.bias,
             aggr=self.aggr,
-            flow="source_to_target",
+            #flow="source_to_target",
         )
 
         self.conv_whh_hs1 = GraphConv(
@@ -59,7 +59,7 @@ class GConvElman(torch.nn.Module):
             out_channels=self.hidden_channels,
             bias=self.bias,
             aggr=self.aggr,
-            flow="source_to_target",
+            #flow="source_to_target",
         )
 
         self.conv_wy_y = GraphConv(
@@ -67,16 +67,16 @@ class GConvElman(torch.nn.Module):
             out_channels=self.out_channels,
             bias=self.bias,
             aggr=self.aggr,
-            flow="source_to_target",
+            #flow="source_to_target",
         )
 
         if init_ones_:
-            nn.init.ones_(self.conv_whx_x.lin_rel.weight)
-            nn.init.ones_(self.conv_whx_x.lin_root.weight)
-            nn.init.ones_(self.conv_whh_hs1.lin_rel.weight)
-            nn.init.ones_(self.conv_whh_hs1.lin_root.weight)
-            nn.init.ones_(self.conv_wy_y.lin_rel.weight)
-            nn.init.ones_(self.conv_wy_y.lin_root.weight)
+            nn.init.eye_(self.conv_whx_x.lin_rel.weight)
+            nn.init.eye_(self.conv_whx_x.lin_root.weight)
+            nn.init.eye_(self.conv_whh_hs1.lin_rel.weight)
+            nn.init.eye_(self.conv_whh_hs1.lin_root.weight)
+            nn.init.eye_(self.conv_wy_y.lin_rel.weight)
+            nn.init.eye_(self.conv_wy_y.lin_root.weight)
 
             if self.conv_whx_x.lin_rel.bias is not None:
                 nn.init.zeros_(self.conv_whx_x.lin_rel.bias)
@@ -100,7 +100,6 @@ class GConvElman(torch.nn.Module):
 
     def _calculate_ht(self, X, edge_index, edge_weight, H):
         Whx_g_xt = self.conv_whx_x(X, edge_index, edge_weight)
-        #Whh_g_hts1 = self.conv_whh_hs1(H, self.H_edge_index, self.H_edge_weight)
         Whh_g_hts1 = self.conv_whh_hs1(H, edge_index, edge_weight)
         H = torch.sigmoid(Whx_g_xt + Whh_g_hts1)
         return H
