@@ -18,8 +18,8 @@ class _GeneralRating(nn.Module):
         self._hp_backup = {}
 
         self.hp_grad = False  # compute gradient of hyper params?
-        if 'hp_grad' in kwargs:
-            self.hp_grad = kwargs['hp_grad']
+        if "hp_grad" in kwargs:
+            self.hp_grad = kwargs["hp_grad"]
 
         for elem in params.keys():
             if elem in kwargs:

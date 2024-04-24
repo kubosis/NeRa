@@ -6,7 +6,6 @@ from abc import abstractmethod
 
 class RecurrentGNN(nn.Module):
     def __init__(self, discount: float, debug: bool, correction: bool):
-
         """
         Basic nn.Module implementation for saving the recurrent GNN model edges and edge weights
         """

@@ -25,14 +25,20 @@ class EloSymbolical(EloModel):
 
         self.rating_dim = rating_dim
         if rating_dim > 1:
-            default = kwargs.get('default', self._params['default'])
+            default = kwargs.get("default", self._params["default"])
             mean = default
-            std = default / 100.
+            std = default / 100.0
 
             if True:
-                self.elo = nn.Parameter(torch.normal(mean, std, (team_count, rating_dim), dtype=torch.float64))
+                self.elo = nn.Parameter(
+                    torch.normal(
+                        mean, std, (team_count, rating_dim), dtype=torch.float64
+                    )
+                )
             else:
-                self.elo = nn.Parameter(torch.full((team_count, rating_dim), default, dtype=torch.float64))
+                self.elo = nn.Parameter(
+                    torch.full((team_count, rating_dim), default, dtype=torch.float64)
+                )
             self.ratings = [self.elo]
 
     def forward(self, matches: Matches):
@@ -43,7 +49,9 @@ class EloSymbolical(EloModel):
 
 class _SymFunction(torch.autograd.Function):
     @staticmethod
-    def forward(home_rating: Tensor, away_rating: Tensor, c: Tensor, d: Tensor, k: float) -> Tensor:
+    def forward(
+        home_rating: Tensor, away_rating: Tensor, c: Tensor, d: Tensor, k: float
+    ) -> Tensor:
         assert home_rating.shape == away_rating.shape
 
         E_H = 1 / (1 + torch.pow(c, ((away_rating - home_rating) / d)))
@@ -61,16 +69,16 @@ class _SymFunction(torch.autograd.Function):
 
         cnst = E_H * (1 - E_H)
 
-        grad_a_rtg = - (torch.log(c) / d) * cnst
-        grad_h_rtg = - grad_a_rtg
+        grad_a_rtg = -(torch.log(c) / d) * cnst
+        grad_h_rtg = -grad_a_rtg
 
         rating_diff = away_rating - home_rating
 
-        grad_c = - (rating_diff / (d * c)) * cnst
+        grad_c = -(rating_diff / (d * c)) * cnst
         grad_d = (rating_diff * torch.log(c) / torch.pow(d, 2)) * cnst
 
-        grad_h_rtg = (grad_output * grad_h_rtg)
-        grad_a_rtg = (grad_output * grad_a_rtg)
+        grad_h_rtg = grad_output * grad_h_rtg
+        grad_a_rtg = grad_output * grad_a_rtg
         grad_c = torch.mean(grad_output * grad_c)
         grad_d = torch.mean(grad_output * grad_d)
 

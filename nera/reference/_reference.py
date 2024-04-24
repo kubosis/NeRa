@@ -14,24 +14,35 @@ class RatingReference:
         """
         self.num_teams = num_teams
 
-    def compute_reference(self, rating: str, temp_dataset, **kwargs) -> Sequence[np.ndarray]:
+    def compute_reference(
+        self, rating: str, temp_dataset, **kwargs
+    ) -> Sequence[np.ndarray]:
         """
         :param rating: (str) 'elo' / 'berrar' / 'pi'
         :param temp_dataset: (Temporal Dataset Signal Iterator)
         :return: Sequence[ndarray] computed rating values
         """
-        if rating == 'elo':
+        if rating == "elo":
             return self._elo_reference(temp_dataset, **kwargs)
-        elif rating == 'berrar':
+        elif rating == "berrar":
             return self._berrar_reference(temp_dataset, **kwargs)
-        elif rating == 'pi':
+        elif rating == "pi":
             return self._pi_reference(temp_dataset, **kwargs)
         else:
-            logger.error(f'Unknown rating {rating}')
-            raise ValueError(f'Unknown rating {rating}')
+            logger.error(f"Unknown rating {rating}")
+            raise ValueError(f"Unknown rating {rating}")
 
-    def _elo_reference(self, temp_dataset, elo_base: int = 1000, gamma: float = 2., c: float = 3., d: float = 500.,
-                       k: float = 3., verbose: bool = False, **kwargs) -> Sequence[np.ndarray]:
+    def _elo_reference(
+        self,
+        temp_dataset,
+        elo_base: int = 1000,
+        gamma: float = 2.0,
+        c: float = 3.0,
+        d: float = 500.0,
+        k: float = 3.0,
+        verbose: bool = False,
+        **kwargs,
+    ) -> Sequence[np.ndarray]:
         """
         Compute elo rating manually from natches dataframe
         :param elo_base: (float) base elo value
@@ -58,7 +69,13 @@ class RatingReference:
                 home_pts, away_pts = match_points[m, 0], match_points[m, 1]
 
                 E_h = 1 / (1 + np.power(c, ((elo[a_i] - elo[h_i]) / d)))
-                S_h = 1. if home_pts > away_pts else 0. if home_pts < away_pts else 1 / 2
+                S_h = (
+                    1.0
+                    if home_pts > away_pts
+                    else 0.0
+                    if home_pts < away_pts
+                    else 1 / 2
+                )
 
                 E_HS.append(E_h)
 
@@ -77,10 +94,21 @@ class RatingReference:
                 iter_ += 1
         return [np.array(elo)]
 
-    def _berrar_reference(self, temp_dataset, default: float = 1000, alpha_a: float = 180, alpha_h: float = 180,
-                          beta_a: float = 2, beta_h: float = 2, bias_h: float = 0, bias_a: float = 0,
-                          lr_a_att: float = 0.1, lr_h_att: float = 0.1,
-                          lr_a_def: float = 0.1, lr_h_def: float = 0.1) -> Sequence[np.ndarray]:
+    def _berrar_reference(
+        self,
+        temp_dataset,
+        default: float = 1000,
+        alpha_a: float = 180,
+        alpha_h: float = 180,
+        beta_a: float = 2,
+        beta_h: float = 2,
+        bias_h: float = 0,
+        bias_a: float = 0,
+        lr_a_att: float = 0.1,
+        lr_h_att: float = 0.1,
+        lr_a_def: float = 0.1,
+        lr_h_def: float = 0.1,
+    ) -> Sequence[np.ndarray]:
 
         att_ = torch.zeros((self.num_teams,), dtype=torch.float64) + default
         def_ = torch.zeros((self.num_teams,), dtype=torch.float64) + default
@@ -111,8 +139,14 @@ class RatingReference:
 
         return [att_, def_]
 
-    def _pi_reference(self, temp_dataset, lambda_: float = 0.1, gamma: float = 0.1,
-                      c: float = 100, default: float = 1000.) -> Sequence[np.ndarray]:
+    def _pi_reference(
+        self,
+        temp_dataset,
+        lambda_: float = 0.1,
+        gamma: float = 0.1,
+        c: float = 100,
+        default: float = 1000.0,
+    ) -> Sequence[np.ndarray]:
 
         home_rating = torch.zeros((self.num_teams,), dtype=torch.float64) + default
         away_rating = torch.zeros((self.num_teams,), dtype=torch.float64) + default

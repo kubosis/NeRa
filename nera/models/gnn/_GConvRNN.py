@@ -2,7 +2,7 @@ import copy
 
 import torch
 from torch import nn
-from torch_geometric.nn import GraphConv
+from torch_geometric.nn import GraphConv, ChebConv, SAGEConv, GCNConv
 
 
 class GConvElman(torch.nn.Module):
@@ -24,53 +24,63 @@ class GConvElman(torch.nn.Module):
         bias (bool, optional): If set to :obj:`False`, the layer will not learn
             an additive bias. (default: :obj:`True`)
     """
+    _gconv = {
+        "SAGEConv": SAGEConv,
+        "GCNConv": GCNConv,
+        "GraphConv": GraphConv,
+        "ChebConv": ChebConv,
+    }
 
     def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            hidden_channels: int = -1,
-            aggr: str = "add",
-            bias: bool = True,
-            init_ones_: bool = True,
+        self,
+        in_channels: int,
+        out_channels: int,
+        gconv: str = "GraphConv",
+        aggr: str = "add",
+        bias: bool = True,
+        init_ones_: bool = True,
+        K: int = 2,
+        normalization: str = "sym",
     ):
+        assert gconv in ["GraphConv", "SAGEConv", "GCNConv", "ChebConv"]
+
         super(GConvElman, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.hidden_channels = hidden_channels if hidden_channels > 0 else out_channels
         self.aggr = aggr
         self.bias = bias
+        self.K = K
+        self.normalization = normalization
         self.first_call = True
         self.H = None
-        self._create_conv_layers(init_ones_=init_ones_)
 
-    def _create_conv_layers(self, init_ones_):
-        self.conv_whx_x = GraphConv(
-            in_channels=self.in_channels,
-            out_channels=self.hidden_channels,
-            bias=self.bias,
-            aggr=self.aggr,
-            #flow="source_to_target",
-        )
+        self._resolve_gconv(gconv)
 
-        self.conv_whh_hs1 = GraphConv(
-            in_channels=self.hidden_channels,
-            out_channels=self.hidden_channels,
-            bias=self.bias,
-            aggr=self.aggr,
-            #flow="source_to_target",
-        )
+    def _resolve_gconv(self, gconv):
+        model = self._gconv[gconv]
+        _model_params = {
+            "in_channels": self.in_channels,
+            "out_channels": self.out_channels,
+        }
+        if gconv == "GraphConv" or gconv == "SAGEConv":
+            # for our purposes we really just consider add
+            _model_params["aggr"] = self.aggr
+        if gconv == "ChebConv":
+            _model_params["normalization"] = self.normalization
+            _model_params["K"] = self.K
 
-        self.conv_wy_y = GraphConv(
-            in_channels=self.hidden_channels,
-            out_channels=self.out_channels,
-            bias=self.bias,
-            aggr=self.aggr,
-            #flow="source_to_target",
-        )
+        self._create_conv_layers(model, **_model_params)
 
-        if init_ones_:
+    def _create_conv_layers(self, model, init_ones_=False, **kwargs):
+        self.conv_whx_x = model(**kwargs)
+        kwargs["in_channels"] = self.out_channels
+
+        self.conv_whh_hs1 = model(**kwargs)
+
+        self.conv_wy_y = model(**kwargs)
+
+        if init_ones_ and isinstance(model, GraphConv):
             nn.init.eye_(self.conv_whx_x.lin_rel.weight)
             nn.init.eye_(self.conv_whx_x.lin_root.weight)
             nn.init.eye_(self.conv_whh_hs1.lin_rel.weight)
@@ -114,10 +124,10 @@ class GConvElman(torch.nn.Module):
         self.H.requires_grad_(True)
 
     def forward(
-            self,
-            X: torch.FloatTensor,
-            edge_index: torch.LongTensor,
-            edge_weight: torch.FloatTensor = None,
+        self,
+        X: torch.FloatTensor,
+        edge_index: torch.LongTensor,
+        edge_weight: torch.FloatTensor = None,
     ) -> torch.FloatTensor:
         """
         Making a forward pass. If edge weights are not present the forward pass

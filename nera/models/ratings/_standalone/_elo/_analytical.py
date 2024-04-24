@@ -28,7 +28,9 @@ class EloAnalytical(EloModel):
 
 class _EloFunction(torch.autograd.Function):
     @staticmethod
-    def forward(home_rating: Tensor, away_rating: Tensor, c: Tensor, d: Tensor) -> Tensor:
+    def forward(
+        home_rating: Tensor, away_rating: Tensor, c: Tensor, d: Tensor
+    ) -> Tensor:
         E_H = 1 / (1 + torch.pow(c, ((away_rating - home_rating) / d)))
         return E_H
 
@@ -45,8 +47,8 @@ class _EloFunction(torch.autograd.Function):
 
         cnst = E_H * (1 - E_H)
 
-        grad_a_rtg = - (torch.log(c) / d) * cnst
-        grad_h_rtg = - grad_a_rtg
+        grad_a_rtg = -(torch.log(c) / d) * cnst
+        grad_h_rtg = -grad_a_rtg
 
         rating_diff = away_rating - home_rating
 
@@ -54,14 +56,14 @@ class _EloFunction(torch.autograd.Function):
         grad_d = None
 
         if ctx.needs_input_grad[2]:
-            grad_c = - (rating_diff / (d * c)) * cnst
-            grad_c = (grad_output * grad_c)
+            grad_c = -(rating_diff / (d * c)) * cnst
+            grad_c = grad_output * grad_c
         if ctx.needs_input_grad[3]:
             grad_d = (rating_diff * torch.log(c) / torch.pow(d, 2)) * cnst
-            grad_d = (grad_output * grad_d)
+            grad_d = grad_output * grad_d
 
-        grad_h_rtg = (grad_output * grad_h_rtg)
-        grad_a_rtg = (grad_output * grad_a_rtg)
+        grad_h_rtg = grad_output * grad_h_rtg
+        grad_a_rtg = grad_output * grad_a_rtg
 
         return grad_h_rtg, grad_a_rtg, grad_c, grad_d
 

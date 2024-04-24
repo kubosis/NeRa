@@ -51,12 +51,27 @@ class _BerrarFunction(torch.autograd.Function):
         hatt, hdef, aatt, adef, ah, aa, bh, ba, yh, ya = inputs
         ghat_h = output[0].unsqueeze(0)
         ghat_a = output[1].unsqueeze(0)
-        ctx.save_for_backward(hatt, hdef, aatt, adef, ah, aa, bh, ba, yh, ya, ghat_h, ghat_a)
+        ctx.save_for_backward(
+            hatt, hdef, aatt, adef, ah, aa, bh, ba, yh, ya, ghat_h, ghat_a
+        )
 
     # This function has only a single output, so it gets only one gradient
     @staticmethod
     def backward(ctx, grad_output):
-        hatt, hdef, aatt, adef, ah, aa, bh, ba, yh, ya, ghat_h, ghat_a = ctx.saved_tensors
+        (
+            hatt,
+            hdef,
+            aatt,
+            adef,
+            ah,
+            aa,
+            bh,
+            ba,
+            yh,
+            ya,
+            ghat_h,
+            ghat_a,
+        ) = ctx.saved_tensors
 
         exp_h = torch.exp(bh * (hatt + adef) + yh)
         exp_a = torch.exp(ba * (aatt + hdef) + ya)
@@ -99,8 +114,18 @@ class _BerrarFunction(torch.autograd.Function):
         d_loss_d_aatt = grad_output[1] * d_ghat_a_d_aatt
         d_loss_d_hdef = grad_output[1] * d_ghat_a_d_hdef
 
-        return d_loss_d_hatt, d_loss_d_hdef, d_loss_d_aatt, d_loss_d_adef, \
-            d_loss_d_ah, d_loss_d_aa, d_loss_d_bh, d_loss_d_ba, d_loss_d_yh, d_loss_d_ya
+        return (
+            d_loss_d_hatt,
+            d_loss_d_hdef,
+            d_loss_d_aatt,
+            d_loss_d_adef,
+            d_loss_d_ah,
+            d_loss_d_aa,
+            d_loss_d_bh,
+            d_loss_d_ba,
+            d_loss_d_yh,
+            d_loss_d_ya,
+        )
 
 
 # create alias

@@ -15,13 +15,9 @@ class Dummy:
     @staticmethod
     def _resolve_conf(conf: str) -> list:
         out = [[], [], []]
-        resolved = {
-            'h': ['home', 10, 0],
-            'a': ['away', 0, 10],
-            'd': ['draw', 5, 5]
-        }
+        resolved = {"h": ["home", 10, 0], "a": ["away", 0, 10], "d": ["draw", 5, 5]}
         for c in conf.lower():
-            assert c in ['h', 'a', 'd']
+            assert c in ["h", "a", "d"]
             res = resolved[c]
             out[0].append(res[0])
             out[1].append(res[1])
@@ -35,14 +31,17 @@ class Dummy:
         winner, home_pts, away_pts = Dummy._resolve_conf(conf)
         delta = timedelta(days=1)
         now = datetime.now()
-        data = pd.DataFrame({'DT': [*[now + j * delta for j in range(3)]],
-                             'Home': ['A', 'B', 'C'],
-                             'Away': ['B', 'C', 'D'],
-                             'Winner': winner,
-                             'Home_points': home_pts,
-                             'Away_points': away_pts,
-                             'League': [*(3 * ['liga'])],
-                             })
+        data = pd.DataFrame(
+            {
+                "DT": [*[now + j * delta for j in range(3)]],
+                "Home": ["A", "B", "C"],
+                "Away": ["B", "C", "D"],
+                "Winner": winner,
+                "Home_points": home_pts,
+                "Away_points": away_pts,
+                "League": [*(3 * ["liga"])],
+            }
+        )
         return data
 
     @staticmethod
@@ -52,14 +51,25 @@ class Dummy:
         winner, home_pts, away_pts = Dummy._resolve_conf(conf)
         delta = timedelta(days=1)
         now = datetime.now()
-        data = pd.DataFrame({'DT': [*[now + j * delta for j in range(3)]],
-                             'Home': ['A', 'B', 'C',],
-                             'Away': ['B', 'C', 'A',],
-                             'Winner': winner,
-                             'Home_points': home_pts,
-                             'Away_points': away_pts,
-                             'League': [*(3 * ['liga'])],
-                             })
+        data = pd.DataFrame(
+            {
+                "DT": [*[now + j * delta for j in range(3)]],
+                "Home": [
+                    "A",
+                    "B",
+                    "C",
+                ],
+                "Away": [
+                    "B",
+                    "C",
+                    "A",
+                ],
+                "Winner": winner,
+                "Home_points": home_pts,
+                "Away_points": away_pts,
+                "League": [*(3 * ["liga"])],
+            }
+        )
         return data
 
     @staticmethod
@@ -69,35 +79,49 @@ class Dummy:
         winner, home_pts, away_pts = Dummy._resolve_conf(conf)
         delta = timedelta(days=1)
         now = datetime.now()
-        data = pd.DataFrame({'DT': [*[now + j * delta for j in range(3)]],
-                             'Home': ['A', 'A', 'B',],
-                             'Away': ['B', 'C', 'C',],
-                             'Winner': winner,
-                             'Home_points': home_pts,
-                             'Away_points': away_pts,
-                             'League': [*(3 * ['liga'])],
-                             })
+        data = pd.DataFrame(
+            {
+                "DT": [*[now + j * delta for j in range(3)]],
+                "Home": [
+                    "A",
+                    "A",
+                    "B",
+                ],
+                "Away": [
+                    "B",
+                    "C",
+                    "C",
+                ],
+                "Winner": winner,
+                "Home_points": home_pts,
+                "Away_points": away_pts,
+                "League": [*(3 * ["liga"])],
+            }
+        )
         return data
 
     @staticmethod
     def generate_dummy(match_count: int, team_count: int, conf: str):
-        """ generate dummy dataset of arbitrary length and configuration (every match still within one league) """
+        """generate dummy dataset of arbitrary length and configuration (every match still within one league)"""
         assert len(conf) == match_count
 
-        teams = [chr(i+ord('A')) for i in range(team_count)]
+        teams = [chr(i + ord("A")) for i in range(team_count)]
         home = [teams[i % len(teams)] for i in range(match_count)]
-        away = [teams[(i+1) % len(teams)] for i in range(match_count)]
+        away = [teams[(i + 1) % len(teams)] for i in range(match_count)]
         winner, home_pts, away_pts = Dummy._resolve_conf(conf)
         delta = timedelta(days=1)
         now = datetime.now()
-        data = pd.DataFrame({'DT': [*[now + j * delta for j in range(match_count)]],
-                             'Home': home,
-                             'Away': away,
-                             'Winner': winner,
-                             'Home_points': home_pts,
-                             'Away_points': away_pts,
-                             'League': [*(match_count * ['liga'])],
-                             })
+        data = pd.DataFrame(
+            {
+                "DT": [*[now + j * delta for j in range(match_count)]],
+                "Home": home,
+                "Away": away,
+                "Winner": winner,
+                "Home_points": home_pts,
+                "Away_points": away_pts,
+                "League": [*(match_count * ["liga"])],
+            }
+        )
         return data
 
 

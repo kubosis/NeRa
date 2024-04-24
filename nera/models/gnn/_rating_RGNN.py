@@ -8,28 +8,29 @@ from ._reccurent_gnn import RecurrentGNN
 from ._gconv_gru_copy import GConvGRU
 
 
-#from torch_geometric_temporal.nn import GConvGRU
+# from torch_geometric_temporal.nn import GConvGRU
 
 
 class RatingGNN(RecurrentGNN):
     _activations = {
-        'relu': nn.ReLU(),
-        'sigmoid': nn.Sigmoid(),
-        'lrelu': nn.LeakyReLU(0.2),
-        'tanh': nn.Tanh(),
+        "relu": nn.ReLU(),
+        "sigmoid": nn.Sigmoid(),
+        "lrelu": nn.LeakyReLU(0.2),
+        "tanh": nn.Tanh(),
     }
 
-    def __init__(self, team_count: int,
-                 embed_dim: int,
-                 out_channels: int,
-                 rnn_gconv: nn.Module,
-                 rating: nn.Module,
-                 discount: float = 0.5,
-                 default: float = 1.0,
-                 correction: bool = False,
-                 debug: bool = False,
-                 ):
-
+    def __init__(
+        self,
+        team_count: int,
+        embed_dim: int,
+        out_channels: int,
+        rnn_gconv: nn.Module,
+        rating: nn.Module,
+        discount: float = 0.5,
+        default: float = 1.0,
+        correction: bool = False,
+        debug: bool = False,
+    ):
         """
         Baseline recurrent graph neural network for match outcome prediction. The architecture is following:
         signal x (match home vs away team)
@@ -53,8 +54,10 @@ class RatingGNN(RecurrentGNN):
         self.team_count = team_count
 
         self.embed_dim = embed_dim
-        #self.embedding = nn.Parameter(torch.full((team_count, embed_dim), default, dtype=torch.float))
-        self.embedding = nn.Embedding(num_embeddings=team_count, embedding_dim=embed_dim, dtype=torch.float)
+        # self.embedding = nn.Parameter(torch.full((team_count, embed_dim), default, dtype=torch.float))
+        self.embedding = nn.Embedding(
+            num_embeddings=team_count, embedding_dim=embed_dim, dtype=torch.float
+        )
         nn.init.ones_(self.embedding.weight)
 
         # recurrent graph convolution layer

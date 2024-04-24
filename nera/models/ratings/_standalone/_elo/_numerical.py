@@ -21,5 +21,8 @@ class EloNumerical(EloModel):
 
     def forward(self, matches: Matches):
         self.home, self.away = matches
-        E_H = 1 / (1 + torch.pow(self.c, ((self.elo[self.away] - self.elo[self.home]) / self.d)))
+        E_H = 1 / (
+            1
+            + torch.pow(self.c, ((self.elo[self.away] - self.elo[self.home]) / self.d))
+        )
         return E_H

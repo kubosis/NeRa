@@ -10,8 +10,15 @@ import socket
 
 from nera.data._macros import PATH
 
-__all__ = ["save_to_pickle", "load_from_pickle", "save_json", "load_json",
-           "safe_data_csv", "load_data_csv", "ssh_save_data_to_postgres"]
+__all__ = [
+    "save_to_pickle",
+    "load_from_pickle",
+    "save_json",
+    "load_json",
+    "safe_data_csv",
+    "load_data_csv",
+    "ssh_save_data_to_postgres",
+]
 
 from nera.utils import ssh_tunnel
 
@@ -29,13 +36,15 @@ def load_from_pickle(fname: str):
     """
     Loading data from pickle
     """
-    with open(fname, 'rb') as file:
+    with open(fname, "rb") as file:
         data = pickle.load(file)
         logger.info(f"{fname} loaded from pickle")
         return data
 
 
-def save_json(df: pd.DataFrame | dict, fname: str = "data.json", fpath: str = PATH) -> None:
+def save_json(
+    df: pd.DataFrame | dict, fname: str = "data.json", fpath: str = PATH
+) -> None:
     if isinstance(df, dict):
         json_obj = json.dumps(df, indent=4)
     else:
@@ -47,7 +56,7 @@ def save_json(df: pd.DataFrame | dict, fname: str = "data.json", fpath: str = PA
 
 
 def load_json(fname: str = "data.json", fpath: str = PATH) -> pd.DataFrame:
-    with open(fpath + fname, 'r') as openfile:
+    with open(fpath + fname, "r") as openfile:
         json_obj = json.load(openfile)
     df = pd.DataFrame.from_dict(json_obj, orient="index")
     logger.info(f"data loaded from json {fname}")
@@ -61,7 +70,7 @@ def safe_data_csv(fname: str, df: pd.DataFrame, fpath: str = PATH) -> None:
     if init:
         df.to_csv(filepath, index=False)
     else:
-        df.to_csv(filepath, index=False, mode='a', header=False)
+        df.to_csv(filepath, index=False, mode="a", header=False)
     logger.info(f"Saved {len(df)} rows to {filepath}")
 
 
@@ -72,8 +81,15 @@ def load_data_csv(fname: str):
 
 
 @ssh_tunnel
-def ssh_save_data_to_postgres(df: pd.DataFrame, db_name: str, table: str, schema: str,
-                              db_user: str, db_pwd: str, ssh_server: SSHTunnelForwarder) -> None:
+def ssh_save_data_to_postgres(
+    df: pd.DataFrame,
+    db_name: str,
+    table: str,
+    schema: str,
+    db_user: str,
+    db_pwd: str,
+    ssh_server: SSHTunnelForwarder,
+) -> None:
     """
     Connect  to postgres database via SSH tunnelling and create table from df
     :param df: (pandas.Dataframe)
@@ -93,11 +109,12 @@ def ssh_save_data_to_postgres(df: pd.DataFrame, db_name: str, table: str, schema
 
     # connect to PostgreSQL
     local_port = 5432  # str(ssh_server.local_bind_port)
-    host = 'localhost'
-    connect_string = f'postgresql://{db_user}:{db_pwd}@{host}:{local_port}/{db_name}'
-    engine = create_engine(connect_string,
-                           pool_pre_ping=True,
-                           )
+    host = "localhost"
+    connect_string = f"postgresql://{db_user}:{db_pwd}@{host}:{local_port}/{db_name}"
+    engine = create_engine(
+        connect_string,
+        pool_pre_ping=True,
+    )
     logger.info(f"Postgres engine created for {connect_string}")
 
     df.to_sql(table, engine, schema=schema)

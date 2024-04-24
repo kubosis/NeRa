@@ -10,33 +10,35 @@ from ._gconv_gru_copy import GConvGRU
 from ._reccurent_gnn import RecurrentGNN
 
 
-#from torch_geometric_temporal.nn import GConvGRU
+# from torch_geometric_temporal.nn import GConvGRU
 
 
 class RGNN(RecurrentGNN):
     _activations = {
-        'relu': nn.ReLU(),
-        'sigmoid': nn.Sigmoid(),
-        'lrelu': nn.LeakyReLU(0.2),
-        'tanh': nn.Tanh(),
+        "relu": nn.ReLU(),
+        "sigmoid": nn.Sigmoid(),
+        "lrelu": nn.LeakyReLU(0.2),
+        "tanh": nn.Tanh(),
     }
 
-    def __init__(self, team_count: int,
-                 in_channels: int,
-                 out_channels: int,
-                 conv_out_channels: int = 1,
-                 conv_hidden_channels: int = 1,
-                 activation: str = 'relu',
-                 K: int = 1,
-                 bias: bool = True,
-                 init_ones_: bool = False,
-                 graph_conv: str = 'GCONV_GRU',
-                 normalization: Optional[str] = 'sym',
-                 discount: float = 0.5,
-                 aggr: str = 'add',
-                 correction: bool = True,
-                 debug=False):
-
+    def __init__(
+        self,
+        team_count: int,
+        in_channels: int,
+        out_channels: int,
+        conv_out_channels: int = 1,
+        conv_hidden_channels: int = 1,
+        activation: str = "relu",
+        K: int = 1,
+        bias: bool = True,
+        init_ones_: bool = False,
+        graph_conv: str = "GCONV_GRU",
+        normalization: Optional[str] = "sym",
+        discount: float = 0.5,
+        aggr: str = "add",
+        correction: bool = True,
+        debug=False,
+    ):
         """
         Baseline recurrent graph neural network for match outcome prediction. The architecture is following:
         signal x (match home vs away team)
@@ -64,7 +66,7 @@ class RGNN(RecurrentGNN):
         """
 
         assert K > 0
-        assert graph_conv.upper() in ['GCONV_GRU', 'GCONV_ELMAN', 'PEREVERZEVA_RGNN']
+        assert graph_conv.upper() in ["GCONV_GRU", "GCONV_ELMAN", "PEREVERZEVA_RGNN"]
 
         super(RGNN, self).__init__(discount, debug, correction)
 
@@ -72,15 +74,28 @@ class RGNN(RecurrentGNN):
         self.act_fn = self._activations[activation]
 
         self.embed_dim = in_channels
-        self.embedding = nn.Parameter(torch.full((team_count, in_channels), 1, dtype=torch.float))
-        #self.embedding = nn.Embedding(num_embeddings=team_count, embedding_dim=embed_dim)
+        self.embedding = nn.Parameter(
+            torch.full((team_count, in_channels), 1, dtype=torch.float)
+        )
+        # self.embedding = nn.Embedding(num_embeddings=team_count, embedding_dim=embed_dim)
 
         # recurrent graph convolution layer
-        if graph_conv.upper() == 'GCONV_ELMAN':
-            gconv = GConvElman(in_channels, conv_out_channels,
-                               aggr=aggr, init_ones_=init_ones_, bias=bias, hidden_channels=conv_hidden_channels)
-        elif graph_conv.upper() == 'PEREVERZEVA_RGNN':
-            gconv = GraphConv(in_channels, conv_out_channels, bias=bias, aggr=aggr,)
+        if graph_conv.upper() == "GCONV_ELMAN":
+            gconv = GConvElman(
+                in_channels,
+                conv_out_channels,
+                aggr=aggr,
+                init_ones_=init_ones_,
+                bias=bias,
+                hidden_channels=conv_hidden_channels,
+            )
+        elif graph_conv.upper() == "PEREVERZEVA_RGNN":
+            gconv = GraphConv(
+                in_channels,
+                conv_out_channels,
+                bias=bias,
+                aggr=aggr,
+            )
             if init_ones_:
                 nn.init.ones_(gconv.lin_rel.weight)
                 nn.init.ones_(gconv.lin_root.weight)
@@ -89,9 +104,15 @@ class RGNN(RecurrentGNN):
                 if gconv.lin_root.bias is not None:
                     nn.init.zeros_(gconv.lin_root.bias)
         else:
-            #graph_conv.upper() == 'GCONV_GRU':
-            gconv = GConvGRU(in_channels, conv_out_channels, K, bias=bias,
-                             init_ones_=init_ones_, normalization=normalization, )
+            # graph_conv.upper() == 'GCONV_GRU':
+            gconv = GConvGRU(
+                in_channels,
+                conv_out_channels,
+                K,
+                bias=bias,
+                init_ones_=init_ones_,
+                normalization=normalization,
+            )
 
         self.rnn_gconv = gconv
 

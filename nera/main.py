@@ -8,7 +8,14 @@ import torch_geometric.nn.aggr as aggr
 
 from nera.data import *
 from nera.dummy import get_dummy_df, Dummy
-from nera.models.ratings import EloAnalytical, EloManual, EloNumerical, EloSymbolical, Elo, Berrar
+from nera.models.ratings import (
+    EloAnalytical,
+    EloManual,
+    EloNumerical,
+    EloSymbolical,
+    Elo,
+    Berrar,
+)
 from nera.reference import *
 from nera.models.gnn import GCONVCheb, RGNN, GConvElman, RatingGNN
 from nera.trainer import Trainer
@@ -25,7 +32,7 @@ def eval_symbolic_elo(transform):
     trainer = Trainer(dataset)
     trainer.model = elo_sym
     trainer.train_ratio = 0.8
-    trainer.set_lr(0.1, 'rating')
+    trainer.set_lr(0.1, "rating")
     acc_sym = trainer.train(epochs=5, val_ratio=0.2, verbose=True)
     trainer.test(verbose=True)
 
@@ -48,15 +55,19 @@ def print_embedding_progression(gnn, trainer, team_count, verbose, embed_dim):
     h = torch.tensor(list(range(gnn.team_count)))
     h = gnn.embedding(h).reshape(-1, gnn.embed_dim)
     gnn.embedding_progression.append(h.clone().detach().numpy())
-    progression = np.array(gnn.embedding_progression).reshape(-1, team_count * embed_dim, )
+    progression = np.array(gnn.embedding_progression).reshape(
+        -1,
+        team_count * embed_dim,
+    )
     # embedding_progression = pd.DataFrame(np.array(gnn.embedding_progression).reshape(4, -1), columns=['A', 'B', 'C', 'D'])
 
     delta = np.zeros((progression.shape[0] - 1, progression.shape[1]))
     for i in range(progression.shape[0] - 1):
-        delta[i, :] = - progression[i, :] + progression[i + 1, :]
+        delta[i, :] = -progression[i, :] + progression[i + 1, :]
 
     print(
-        f'Embedding progression\n{np.around(progression, decimals=4)}\ndelta scaled 100times:\n{np.around(100 * delta, decimals=4)}\n--------------------')
+        f"Embedding progression\n{np.around(progression, decimals=4)}\ndelta scaled 100times:\n{np.around(100 * delta, decimals=4)}\n--------------------"
+    )
 
     if verbose:
         for name, param in trainer.model.named_parameters():
@@ -64,84 +75,139 @@ def print_embedding_progression(gnn, trainer, team_count, verbose, embed_dim):
 
 
 def simple_gnn_test(transform, verbose=False, **kwargs):
-    dataset = transform.get_dataset(node_f_extract=False, edge_f_one_hot=True, drop_draws=True)
+    dataset = transform.get_dataset(
+        node_f_extract=False, edge_f_one_hot=True, drop_draws=True
+    )
     team_count = transform.num_teams
 
     embed_dim = 1
 
-    gnn = RGNN(team_count=team_count, in_channels=embed_dim,
-               conv_out_channels=1, debug=True, K=2,
-               out_channels=2, init_ones_=True, bias=True, normalization='sym',
-               graph_conv='PEREVERZEVA_RGNN', discount=0.8, aggr='add', correction=False)
-    trainer = Trainer(dataset, gnn, loss_fn=torch.nn.CrossEntropyLoss(), lr=0.01, lr_rating=1)
+    gnn = RGNN(
+        team_count=team_count,
+        in_channels=embed_dim,
+        conv_out_channels=1,
+        debug=True,
+        K=2,
+        out_channels=2,
+        init_ones_=True,
+        bias=True,
+        normalization="sym",
+        graph_conv="PEREVERZEVA_RGNN",
+        discount=0.8,
+        aggr="add",
+        correction=False,
+    )
+    trainer = Trainer(
+        dataset, gnn, loss_fn=torch.nn.CrossEntropyLoss(), lr=0.01, lr_rating=1
+    )
     trainer.train_ratio = 1
     _ = trainer.train(epochs=1, val_ratio=0, verbose=verbose, bidir=True)
     print_embedding_progression(gnn, trainer, team_count, verbose, embed_dim)
 
 
-def gnn_rating_test(transform, rating='elo', verbose=False):
+def gnn_rating_test(transform, rating="elo", verbose=False):
     assert isinstance(rating, str)
     rating = rating.lower()
-    assert rating in ['elo', 'berrar', 'pi']
+    assert rating in ["elo", "berrar", "pi"]
 
-    dataset = transform.get_dataset(node_f_extract=False, edge_f_one_hot=True, drop_draws=True)
+    dataset = transform.get_dataset(
+        node_f_extract=False, edge_f_one_hot=True, drop_draws=True
+    )
     team_count = transform.num_teams
 
     embed_dim = 2
     hidden_conv_dim = 2
-    rating_dim = 2
+    rating_dim = 4
 
-    rnn_gconv = GConvElman(in_channels=embed_dim, hidden_channels=hidden_conv_dim,
-                           out_channels=rating_dim, aggr='add', bias=True, init_ones_=True)
-    if rating == 'elo':
+    rnn_gconv = GConvElman(
+        in_channels=embed_dim,
+        hidden_channels=hidden_conv_dim,
+        out_channels=rating_dim,
+        aggr="add",
+        bias=True,
+        init_ones_=True,
+    )
+    if rating == "elo":
         rating = Elo(d=0.8, hp_grad=True, in_channels=rating_dim)
-    elif rating == 'berrar':
-        rating = Berrar(hp_grad=True)
+    elif rating == "berrar":
+        rating = Berrar(hp_grad=True, in_channels=rating_dim)
     else:
         assert NotImplementedError
 
-    model = RatingGNN(team_count=team_count, rnn_gconv=rnn_gconv, rating=rating, embed_dim=embed_dim, out_channels=2,
-                      discount=0.9, debug=True, correction=False)
+    model = RatingGNN(
+        team_count=team_count,
+        rnn_gconv=rnn_gconv,
+        rating=rating,
+        embed_dim=embed_dim,
+        out_channels=2,
+        discount=0.9,
+        debug=True,
+        correction=False,
+    )
 
-    trainer = Trainer(dataset, model, loss_fn=torch.nn.CrossEntropyLoss(), lr=0.01, lr_rating=1, train_ratio=1)
-    _ = trainer.train(epochs=20, val_ratio=0, verbose=verbose, bidir=True)
+    trainer = Trainer(
+        dataset,
+        model,
+        loss_fn=torch.nn.CrossEntropyLoss(),
+        lr=0.01,
+        lr_rating=1,
+        train_ratio=1,
+    )
+    _ = trainer.train(epochs=1, val_ratio=0, verbose=verbose, bidir=True)
     print_embedding_progression(model, trainer, team_count, verbose, embed_dim)
 
 
-def test_dummy_id_all(test_fn=simple_gnn_test, dummy_id=0, conf_len=3, conf_chars='ha', verbose=False, rating='elo'):
+def test_dummy_id_all(
+    test_fn=simple_gnn_test,
+    dummy_id=0,
+    conf_len=3,
+    conf_chars="ha",
+    verbose=False,
+    rating="elo",
+):
     for config in product(conf_chars, repeat=conf_len):
-        print(f'config: {config}')
-        config = ''.join(config)
+        print(f"config: {config}")
+        config = "".join(config)
         dummy = get_dummy_df(dummy_id, conf=config)
         transform = DataTransformation(dummy, timedelta(days=365))
         test_fn(transform, rating=rating, verbose=verbose)
 
 
-def test_dummy_generate_all(test_fn=simple_gnn_test, match_count=3, team_count=4, conf_chars='ha', verbose=False, rating='elo'):
+def test_dummy_generate_all(
+    test_fn=simple_gnn_test,
+    match_count=3,
+    team_count=4,
+    conf_chars="ha",
+    verbose=False,
+    rating="elo",
+):
     for config in product(conf_chars, repeat=match_count):
-        print(f'config: {config}')
-        config = ''.join(config)
+        print(f"config: {config}")
+        config = "".join(config)
         dummy = Dummy.generate_dummy(match_count, team_count, conf=config)
         transform = DataTransformation(dummy, timedelta(days=365))
         test_fn(transform, verbose=verbose, rating=rating)
 
 
-def test_dummy_id_one(test_fn=simple_gnn_test, dummy_id=0, conf='hhh', verbose=True, rating='elo'):
+def test_dummy_id_one(
+    test_fn=simple_gnn_test, dummy_id=0, conf="hhh", verbose=True, rating="elo"
+):
     dummy = get_dummy_df(dummy_id, conf=conf)
     transform = DataTransformation(dummy, timedelta(days=365))
     test_fn(transform, verbose=verbose, rating=rating)
     print("Config: ", tuple(conf))
+
+
 # ---------------------------------------------------------------------------------------------------
 
 
-
-
-
 def main():
-    #torch.manual_seed(42)
-    test_dummy_id_one(test_fn=gnn_rating_test, rating='berrar', verbose=True, conf='hah', dummy_id=0)
-    #test_dummy_id_all(test_fn=gnn_rating_test, rating='berrar', verbose=True)
+    # torch.manual_seed(42)
+    test_dummy_id_one(
+        test_fn=gnn_rating_test, rating="berrar", verbose=True, conf="hah", dummy_id=0
+    )
+    # test_dummy_id_all(test_fn=gnn_rating_test, rating='berrar', verbose=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

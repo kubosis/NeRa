@@ -9,12 +9,18 @@ import torch
 import pandas as pd
 import numpy as np
 
-__all__ = ["process_kwargs", "print_rating_diff", "generate_random_matches", "conditional_nograd_context",
-           "one_hot_encode", "normalize_array"]
+__all__ = [
+    "process_kwargs",
+    "print_rating_diff",
+    "generate_random_matches",
+    "conditional_nograd_context",
+    "one_hot_encode",
+    "normalize_array",
+]
 
 
 def process_kwargs(mandatory: list, **kwargs) -> tuple[list[Any], dict[str, Any]]:
-    """ check kwargs and return list of popped values and updated kwargs """
+    """check kwargs and return list of popped values and updated kwargs"""
     ret_list = []
     for elem in mandatory:
         if elem not in kwargs:
@@ -23,9 +29,20 @@ def process_kwargs(mandatory: list, **kwargs) -> tuple[list[Any], dict[str, Any]
     return *ret_list, kwargs
 
 
-def print_rating_diff(rating1: nn.Module, rating2: nn.Module, transform,
-                      rat_1_name: str = "Numerical", rat_2_name: str = "Symbolical", eps: float = 1e-2):
-    assert hasattr(rating1, 'is_rating') and rating1.is_rating and hasattr(rating2, 'is_rating') and rating2.is_rating
+def print_rating_diff(
+    rating1: nn.Module,
+    rating2: nn.Module,
+    transform,
+    rat_1_name: str = "Numerical",
+    rat_2_name: str = "Symbolical",
+    eps: float = 1e-2,
+):
+    assert (
+        hasattr(rating1, "is_rating")
+        and rating1.is_rating
+        and hasattr(rating2, "is_rating")
+        and rating2.is_rating
+    )
 
     numerical = rating1
     analytical = rating2
@@ -42,8 +59,12 @@ def print_rating_diff(rating1: nn.Module, rating2: nn.Module, transform,
         rating_num_i = numerical.ratings[rat]
         rating_ana_i = analytical.ratings[rat]
         for i in range(len(rating_num_i)):
-            auto = float(rating_num_i[transform.team_mapping[transform.inv_team_mapping[i]]])
-            grad = float(rating_ana_i[transform.team_mapping[transform.inv_team_mapping[i]]])
+            auto = float(
+                rating_num_i[transform.team_mapping[transform.inv_team_mapping[i]]]
+            )
+            grad = float(
+                rating_ana_i[transform.team_mapping[transform.inv_team_mapping[i]]]
+            )
             diff = abs(auto - grad)
             if diff > eps:
                 err = True
@@ -52,8 +73,11 @@ def print_rating_diff(rating1: nn.Module, rating2: nn.Module, transform,
                 err_count[rat] += 1
                 max_diff[rat] = max(diff, max_diff[rat])
             if print_count < 5:
-                str_i = rf'[ERROR] in rating {rat} on index {i}:: {auto} / {grad}' if err \
-                    else f'{i}:: computed: {auto:10.3f} || net: {grad:10.3f}'
+                str_i = (
+                    rf"[ERROR] in rating {rat} on index {i}:: {auto} / {grad}"
+                    if err
+                    else f"{i}:: computed: {auto:10.3f} || net: {grad:10.3f}"
+                )
                 print(str_i)
                 print_count += 1
 
@@ -61,12 +85,18 @@ def print_rating_diff(rating1: nn.Module, rating2: nn.Module, transform,
         print()
 
         if not err:
-            print("[SUCCESS]: All  ratings computed analytically and numerically are the SAME")
+            print(
+                "[SUCCESS]: All  ratings computed analytically and numerically are the SAME"
+            )
         else:
-            print(f"Total number of errors: {err_count[rat]} out of {len(rating_num_i)} computed ratings")
+            print(
+                f"Total number of errors: {err_count[rat]} out of {len(rating_num_i)} computed ratings"
+            )
             print(f"Cumulative sum of errors: {err_sum[rat]}")
             print(f"Average difference: {err_sum[rat] / err_count[rat]}")
-            print(f"Average difference percentage: {diff_percentage[rat] / err_count[rat] * 100}%")
+            print(
+                f"Average difference percentage: {diff_percentage[rat] / err_count[rat] * 100}%"
+            )
             print(f"Maximal difference: {max_diff[rat]}")
         print("-------------------------")
 
@@ -75,17 +105,23 @@ def print_rating_diff(rating1: nn.Module, rating2: nn.Module, transform,
     for hp in range(len(rating1.hyperparams)):
         num_hp_i = numerical.hyperparams[hp]
         ana_hp_i = analytical.hyperparams[hp]
-        print(f"{rat_1_name}: hyperparam[{hp}] = {float(num_hp_i):8.3f} :: "
-              f"{rat_1_name}: hyperparam[{hp}] = {float(ana_hp_i):8.3f}")
+        print(
+            f"{rat_1_name}: hyperparam[{hp}] = {float(num_hp_i):8.3f} :: "
+            f"{rat_1_name}: hyperparam[{hp}] = {float(ana_hp_i):8.3f}"
+        )
 
 
-def generate_random_matches(team_count: int, matches_per_season: int, season_count: int) -> pd.DataFrame:
-    team_names = [f'team_{i}' for i in range(team_count)]
+def generate_random_matches(
+    team_count: int, matches_per_season: int, season_count: int
+) -> pd.DataFrame:
+    team_names = [f"team_{i}" for i in range(team_count)]
     match_count = matches_per_season * season_count
 
     def generate_sequence(length, elements):
         if len(elements) < 2 and length > 1:
-            raise ValueError("Need at least two distinct elements for sequences longer than 1")
+            raise ValueError(
+                "Need at least two distinct elements for sequences longer than 1"
+            )
 
         sequence = [random.choice(elements)]
 
@@ -97,7 +133,8 @@ def generate_random_matches(team_count: int, matches_per_season: int, season_cou
         return sequence
 
     home_teams = generate_sequence(match_count, team_names)
-    away_teams = copy.deepcopy(home_teams[1:])  # made so that never the same team plays with itself
+    # made so that never the same team plays with itself
+    away_teams = copy.deepcopy(home_teams[1:])
     away_teams.append(home_teams[0])
 
     winners = []
@@ -106,7 +143,13 @@ def generate_random_matches(team_count: int, matches_per_season: int, season_cou
     for _ in range(len(home_teams)):
         rand_home = random.randint(0, 100)
         rand_away = random.randint(0, 100)
-        winner = 'home' if rand_home > rand_away else 'away' if rand_home < rand_away else 'draw'
+        winner = (
+            "home"
+            if rand_home > rand_away
+            else "away"
+            if rand_home < rand_away
+            else "draw"
+        )
         winners.append(winner)
         home_points.append(rand_home)
         away_points.append(rand_away)
@@ -119,15 +162,17 @@ def generate_random_matches(team_count: int, matches_per_season: int, season_cou
         dt.extend([*[now - i * delta2 + j * delta1 for j in range(matches_per_season)]])
 
     data = pd.DataFrame(
-        {'DT': dt,
-         'Home': home_teams,
-         'Away': away_teams,
-         'Winner': winners,
-         'Home_points': home_points,
-         'Away_points': away_points,
-         'League': [*(match_count * ['liga'])],
-         })
-    data = data.sort_values(by='DT', ascending=False)
+        {
+            "DT": dt,
+            "Home": home_teams,
+            "Away": away_teams,
+            "Winner": winners,
+            "Home_points": home_points,
+            "Away_points": away_points,
+            "League": [*(match_count * ["liga"])],
+        }
+    )
+    data = data.sort_values(by="DT", ascending=False)
     return data
 
 

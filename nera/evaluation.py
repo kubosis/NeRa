@@ -1,13 +1,12 @@
-import optuna, mlflow
+import optuna
+import mlflow
 from torch.nn import CrossEntropyLoss
 
 from nera.trainer import Trainer
 from nera.models.gnn import RatingGNN, RGNN
 
-_model = {
-    'rating': RatingGNN,
-    'RGNN': RGNN
-}
+_model = {"rating": RatingGNN, "RGNN": RGNN}
+
 
 class Evaluation:
     @staticmethod
@@ -17,15 +16,29 @@ class Evaluation:
         dropout_rate = trial.suggest_float("dropout_rate", 0.0, 0.5)
 
     @staticmethod
-    def train(model: str, dataset, lr_hyperparams, lr_rating, optim, epochs, val_ratio, **kwargs):
+    def train(
+        model: str,
+        dataset,
+        lr_hyperparams,
+        lr_rating,
+        optim,
+        epochs,
+        val_ratio,
+        **kwargs
+    ):
         assert model in _model
         model = _model[model](**kwargs)
-        trainer = Trainer(dataset, model, lr_hyperparams, lr_rating, loss_fn=CrossEntropyLoss(), optim=optim)
+        trainer = Trainer(
+            dataset,
+            model,
+            lr_hyperparams,
+            lr_rating,
+            loss_fn=CrossEntropyLoss(),
+            optim=optim,
+        )
         trainer.train(epochs, val_ratio=val_ratio)
-        metric = trainer.get_eval_metric('val_accuracy')
+        metric = trainer.get_eval_metric("val_accuracy")
         return metric
 
     def evaluate():
-        _model_kwargs = {
-
-        }
+        _model_kwargs = {}

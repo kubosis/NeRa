@@ -49,5 +49,5 @@ class PiManual(PiModel):
         self.home_rating[a] += self.lambda_ * psi(self.c, err_away)
         self.away_rating[a] += self.gamma * (self.lambda_ * psi(self.c, err_away))
 
-        #print(self.home_rating[h], self.away_rating[h], self.home_rating[a], self.away_rating[a])
+        # print(self.home_rating[h], self.away_rating[h], self.home_rating[a], self.away_rating[a])
         return result

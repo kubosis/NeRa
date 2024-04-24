@@ -9,11 +9,21 @@ class Berrar(nn.Module):
     Loss function should be MSE, forward pass outputs predicted
     number of goals scored by [home, away] team in Tensor
     """
-    def __init__(self, alpha_h: float = 80., beta_h: float = 2., bias_h: float = 0.,
-                 alpha_a: float = 80., beta_a: float = 2., bias_a: float = 0., hp_grad: bool = False):
+
+    def __init__(
+        self,
+        in_channels: int = 2,
+        alpha_h: float = 80.0,
+        beta_h: float = 2.0,
+        bias_h: float = 0.0,
+        alpha_a: float = 80.0,
+        beta_a: float = 2.0,
+        bias_a: float = 0.0,
+        hp_grad: bool = False,
+    ):
         """
         note that default values are meant specifically for basketball
-        
+
         :param alpha_h: expected number of goals by home team, default = 80
         :param beta_h: steepness of exponential for home team, default = 2
         :param bias_h:  bias of home team, default = 0
@@ -21,6 +31,8 @@ class Berrar(nn.Module):
         :param beta_a: steepness of exponential for away team, default = 2
         :param bias_a: bias of away team, default = 0
         """
+        assert in_channels % 2 == 0 and in_channels > 0
+
         super(Berrar, self).__init__()
         self.softmax = nn.Softmax(dim=0)
         if not hp_grad:
@@ -38,9 +50,16 @@ class Berrar(nn.Module):
             self.bias_h = nn.Parameter(torch.tensor(bias_h, dtype=torch.float))
             self.bias_a = nn.Parameter(torch.tensor(bias_a, dtype=torch.float))
 
+        self.in_channels = in_channels
+        if in_channels > 2:
+            self.lin_h = nn.Linear(in_channels, 1)
+            self.lin_a = nn.Linear(in_channels, 1)
+        else:
+            self.lin_h = None
+            self.lin_a = None
+
     def forward(self, home, away):
-        assert len(home) == len(away)
-        assert len(home) % 2 == 0
+        assert len(home) == len(away) == self.in_channels
 
         h_half, a_half = len(home) // 2, len(away) // 2
         hatt, hdef = home[:h_half], home[h_half:]
@@ -51,6 +70,10 @@ class Berrar(nn.Module):
 
         ghat_h = ah / (1 + torch.exp(-bh * (hatt + adef) - yh))
         ghat_a = aa / (1 + torch.exp(-ba * (aatt + hdef) - ya))
+
+        if self.in_channels > 2:
+            ghat_a = self.lin_a(ghat_a)
+            ghat_h = self.lin_h(ghat_h)
 
         y_hat = self.softmax(torch.cat([ghat_a, ghat_h], dim=0))
 

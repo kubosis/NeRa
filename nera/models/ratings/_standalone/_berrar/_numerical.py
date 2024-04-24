@@ -8,6 +8,7 @@ class BerrarNumerical(BerrarModel):
     Loss function should be MSE, forward pass outputs predicted
     number of goals scored by [home, away] team in Tensor
     """
+
     def __init__(self, team_count: int, **kwargs):
         """
         :param team_count: number of teams

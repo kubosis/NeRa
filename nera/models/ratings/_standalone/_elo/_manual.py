@@ -25,7 +25,9 @@ class EloManual(EloModel):
         away_rating = self.elo[self.away]
 
         with torch.no_grad():
-            self.E_H = 1 / (1 + torch.pow(self.c, ((away_rating - home_rating) / self.d)))
+            self.E_H = 1 / (
+                1 + torch.pow(self.c, ((away_rating - home_rating) / self.d))
+            )
 
         return self.E_H
 
@@ -33,14 +35,20 @@ class EloManual(EloModel):
         with torch.no_grad():
             home_pts, away_pts = result
 
-            match_outcome = 1. if home_pts > away_pts else 0. if home_pts < away_pts else 1 / 2
+            match_outcome = (
+                1.0 if home_pts > away_pts else 0.0 if home_pts < away_pts else 1 / 2
+            )
 
             goal_difference = torch.abs(home_pts - away_pts)
 
             h_i = self.home
             a_i = self.away
 
-            update = self.k * ((1 + goal_difference) ** self.gamma) * (match_outcome - self.E_H)
+            update = (
+                self.k
+                * ((1 + goal_difference) ** self.gamma)
+                * (match_outcome - self.E_H)
+            )
 
             self.elo[h_i] += update
             self.elo[a_i] -= update

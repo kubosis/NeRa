@@ -13,7 +13,14 @@ class Elo(nn.Module):
     Outputs tensor of same shape as Input
     """
 
-    def __init__(self, in_channels: int, gamma: float = 2., c: float = 3., d: float = 5., hp_grad: bool = False):
+    def __init__(
+        self,
+        in_channels: int,
+        gamma: float = 2.0,
+        c: float = 3.0,
+        d: float = 5.0,
+        hp_grad: bool = False,
+    ):
         """
         :param gamma: (float) impact scale of goal difference, default value = 2.
         :param c: (float) rating meta parameter, default value = 3.
@@ -29,8 +36,12 @@ class Elo(nn.Module):
             self.c = c
             self.d = d
         else:
-            self.c = nn.Parameter(torch.tensor(c, dtype=torch.float), requires_grad=True)
-            self.d = nn.Parameter(torch.tensor(d, dtype=torch.float), requires_grad=True)
+            self.c = nn.Parameter(
+                torch.tensor(c, dtype=torch.float), requires_grad=True
+            )
+            self.d = nn.Parameter(
+                torch.tensor(d, dtype=torch.float), requires_grad=True
+            )
 
         if in_channels > 1:
             # flatten elo with learnable weights if more than one in-channel present
@@ -43,7 +54,7 @@ class Elo(nn.Module):
         assert len(home) == self.in_channels
 
         E_H = 1 / (1 + torch.pow(self.c, ((away - home) / self.d)))
-        if self.lin is not None:
+        if self.in_channels > 1:
             E_H = self.lin(E_H)
 
         E_A = 1 - E_H
