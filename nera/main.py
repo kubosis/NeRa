@@ -17,7 +17,7 @@ from nera.models.ratings import (
     Berrar,
 )
 from nera.reference import *
-from nera.models.gnn import GCONVCheb, RGNN, GConvElman, RatingGNN
+from nera.models.gnn import GCONVCheb, RGNN, GConvElman, RatingGNN, EvalRatingRGNN
 from nera.trainer import Trainer
 from nera.utils import print_rating_diff, generate_random_matches
 
@@ -156,6 +156,41 @@ def gnn_rating_test(transform, rating="elo", verbose=False):
     _ = trainer.train(epochs=1, val_ratio=0, verbose=verbose, bidir=True)
     print_embedding_progression(model, trainer, team_count, verbose, embed_dim)
 
+def test_eval_rating_gnn(transform, **kwargs):
+    dataset = transform.get_dataset(
+        node_f_extract=False, edge_f_one_hot=True, drop_draws=True
+    )
+
+    embed_dim = 1
+
+    model = EvalRatingRGNN(
+        team_count=transform.num_teams,
+        embed_dim=embed_dim,
+        target_dim=2,
+        discount=0.9,
+        correction=False,
+        activation="lrelu",
+        rgnn_conv="GCONV_GRU",
+        normalization="rw",
+        graph_conv="ChebConv",
+        dense_dims=None,
+        conv_dims=(1,),
+        dropout_rate=0.1,
+        rating="elo",
+    )
+
+    trainer = Trainer(
+        dataset,
+        model,
+        loss_fn=torch.nn.CrossEntropyLoss(),
+        lr=0.01,
+        lr_rating=1,
+        train_ratio=1,
+    )
+
+    _ = trainer.train(epochs=100, val_ratio=0, verbose=True, bidir=True)
+    print_embedding_progression(model, trainer, transform.num_teams, True, embed_dim)
+
 
 def test_dummy_id_all(
     test_fn=simple_gnn_test,
@@ -204,7 +239,7 @@ def test_dummy_id_one(
 def main():
     # torch.manual_seed(42)
     test_dummy_id_one(
-        test_fn=gnn_rating_test, rating="berrar", verbose=True, conf="hah", dummy_id=0
+        test_fn=test_eval_rating_gnn, conf="hah", dummy_id=0
     )
     # test_dummy_id_all(test_fn=gnn_rating_test, rating='berrar', verbose=True)
 

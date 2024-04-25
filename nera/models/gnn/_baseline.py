@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch_geometric.nn import GraphConv
 
-from ._GConvRNN import GConvElman
+from ._GConvElman import GConvElman
 from ._gconv_gru_copy import GConvGRU
 from ._reccurent_gnn import RecurrentGNN
 

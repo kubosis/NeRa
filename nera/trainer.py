@@ -83,14 +83,21 @@ class Trainer:
                 self.optim = torch.optim.SGD(model.ratings, self._lr_rating)
         else:
             self.model_is_rating = False
+
             self.optim = torch.optim.SGD(
                 [
                     {"params": model.embedding.parameters(), "lr": self._lr_rating},
-                    {"params": model.rnn_gconv.parameters(), "lr": self._lr},
-                    {"params": model.pred.parameters()},
                 ],
                 lr=self._lr,
             )
+
+            for m in model.gconv_layers:
+                self.optim.add_param_group({"params": m.parameters(), "lr": self._lr})
+            if model.linear_layers is not None:
+                for m in model.linear_layers:
+                    self.optim.add_param_group({"params": m.parameters(), "lr": self._lr})
+            if model.rating is not None:
+                self.optim.add_param_group({"params": model.rating.parameters(), "lr": self._lr})
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(device)

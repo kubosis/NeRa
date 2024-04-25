@@ -50,14 +50,6 @@ class Berrar(nn.Module):
             self.bias_h = nn.Parameter(torch.tensor(bias_h, dtype=torch.float))
             self.bias_a = nn.Parameter(torch.tensor(bias_a, dtype=torch.float))
 
-        self.in_channels = in_channels
-        if in_channels > 2:
-            self.lin_h = nn.Linear(in_channels, 1)
-            self.lin_a = nn.Linear(in_channels, 1)
-        else:
-            self.lin_h = None
-            self.lin_a = None
-
     def forward(self, home, away):
         assert len(home) == len(away) == self.in_channels
 
@@ -71,10 +63,4 @@ class Berrar(nn.Module):
         ghat_h = ah / (1 + torch.exp(-bh * (hatt + adef) - yh))
         ghat_a = aa / (1 + torch.exp(-ba * (aatt + hdef) - ya))
 
-        if self.in_channels > 2:
-            ghat_a = self.lin_a(ghat_a)
-            ghat_h = self.lin_h(ghat_h)
-
-        y_hat = self.softmax(torch.cat([ghat_a, ghat_h], dim=0))
-
-        return y_hat
+        return torch.cat([ghat_a, ghat_h], dim=0)

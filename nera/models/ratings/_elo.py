@@ -14,17 +14,17 @@ class Elo(nn.Module):
     """
 
     def __init__(
-        self,
-        in_channels: int,
-        gamma: float = 2.0,
-        c: float = 3.0,
-        d: float = 5.0,
-        hp_grad: bool = False,
+            self,
+            in_channels: int,
+            gamma: float = 2.0,
+            c: float = 3.0,
+            d: float = 0.8,
+            hp_grad: bool = False,
     ):
         """
         :param gamma: (float) impact scale of goal difference, default value = 2.
         :param c: (float) rating meta parameter, default value = 3.
-        :param d: (float) rating meta parameter, default value = 5.
+        :param d: (float) rating meta parameter, default value = 0.8.
         :param hp_grad: (bool) whether to use gradient descend for ratings hyperparams
         """
         assert in_channels > 0
@@ -43,19 +43,11 @@ class Elo(nn.Module):
                 torch.tensor(d, dtype=torch.float), requires_grad=True
             )
 
-        if in_channels > 1:
-            # flatten elo with learnable weights if more than one in-channel present
-            self.lin = nn.Linear(in_features=in_channels, out_features=1)
-        else:
-            self.lin = None
-
     def forward(self, home, away):
         assert home.shape == away.shape
         assert len(home) == self.in_channels
 
         E_H = 1 / (1 + torch.pow(self.c, ((away - home) / self.d)))
-        if self.in_channels > 1:
-            E_H = self.lin(E_H)
 
         E_A = 1 - E_H
         return torch.cat([E_A, E_H], dim=0)
