@@ -9,3 +9,5 @@ resources/.~lock.*.csv#
 
 resources/
 nera.egg-info/
+
+nera/mlruns/

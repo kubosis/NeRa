@@ -13,7 +13,7 @@ from ..ratings import Elo, Berrar, Pi
 class EvalRatingRGNN(RecurrentGNN):
     _activations = {
         "relu": nn.ReLU(),
-        "sigmoid": nn.Sigmoid(),
+        "tanh": nn.Tanh(),
         "lrelu": nn.LeakyReLU(0.2),
     }
 
@@ -41,8 +41,8 @@ class EvalRatingRGNN(RecurrentGNN):
             K: int = 2,
             rgnn_conv: str = "GCONV_GRU",
             graph_conv: str = "GCNConv",
-            rating: Optional[str] = None,
-            normalization: str = "sym",
+            rating: str = None,
+            normalization: Optional[str] = "sym",
             aggr: str = "add",
             dense_dims: Optional[tuple[int]] = (8, 8, 8, 8, 8),
             conv_dims: tuple[int] = (16, 16, 16),
@@ -52,7 +52,7 @@ class EvalRatingRGNN(RecurrentGNN):
     ):
 
         assert rgnn_conv.upper() in ["GCONV_GRU", "GCONV_ELMAN", "PEREVERZEVA_RGNN"]
-        assert graph_conv in ["GraphConv", "SAGEConv", "GCNConv", "ChebConv"]
+        assert graph_conv in ["GraphConv", "GCNConv", "ChebConv"]
         assert rating in ["elo", "berrar", "pi"]
 
         assert conv_dims is not None
@@ -112,6 +112,8 @@ class EvalRatingRGNN(RecurrentGNN):
             sequence.append(nn.Linear(in_channels, self.dense_dims[0]))
             for i in range(1, len(self.dense_dims)):
                 sequence.append(nn.Linear(self.dense_dims[i - 1], self.dense_dims[i]))
+            if self.dense_dims[-1] != self.target_dim:
+                sequence.append(nn.Linear(self.dense_dims[-1], self.target_dim))
         else:
             if (self.rating_str == "elo") and (self.conv_dims[-1] * 2 != self.target_dim):
                 sequence.append(nn.Linear(self.conv_dims[-1] * 2, self.target_dim))
@@ -142,13 +144,11 @@ class EvalRatingRGNN(RecurrentGNN):
         elif rgnn_conv.upper() == "PEREVERZEVA_RGNN":
             params = self._get_gconv_params(gconv)
             model = self._gconv[gconv]
-            model_and_act = nn.Sequential(model(**params), self.activation)
-            sequence.append(model_and_act)
+            sequence.append(model(**params))
             for i in range(1, len(conv_dims)):
                 params["in_channels"] = conv_dims[i - 1]
                 params["out_channels"] = conv_dims[i]
-                model_and_act = nn.Sequential(model(**params), self.activation)
-                sequence.append(model_and_act)
+                sequence.append(model(**params))
         self.gconv_layers = sequence
 
     def _get_gconv_params(self, gconv: str):

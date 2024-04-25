@@ -224,8 +224,13 @@ class Trainer:
                         f"validation accuracy: {val_acc / val_count * 100:.2f}%"
                     )
             training_accuracy.append(trn_acc / trn_count)
+            self.train_accuracy = trn_acc / trn_count
+            self.train_loss = trn_loss
             if val_count != 0:
                 validation_accuracy.append(val_acc / val_count)
+                # store for later metric inspection
+                self.val_accuracy = val_acc / val_count
+                self.val_loss = val_loss
 
         return [np.array(training_accuracy), np.array(validation_accuracy)]
 
@@ -281,7 +286,9 @@ class Trainer:
 
         if validation:
             weight = None
-        return index, weight * 0.1
+        else:
+            weight *= 0.1
+        return index, weight
 
     def _step(self):
         for p in self.model.lin.parameters():
