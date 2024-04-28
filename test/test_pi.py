@@ -5,10 +5,10 @@ import random
 import numpy as np
 import torch
 
-from nera.models.ratings import PiManual, EloManual, EloAnalytical
+from nera.models.ratings import PiManual
 from nera.reference import RatingReference
 from nera.trainer import Trainer
-from nera.utils import generate_random_matches
+from nera.data.utils import generate_random_matches
 from nera.data import DataTransformation
 
 

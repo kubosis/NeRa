@@ -4,7 +4,7 @@ from loguru import logger
 from datetime import timedelta
 from torch_geometric_temporal.signal import DynamicGraphTemporalSignal
 
-from ..utils import one_hot_encode, normalize_array
+from .utils import one_hot_encode, normalize_array
 
 
 class DataTransformation:

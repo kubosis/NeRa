@@ -1,35 +1,36 @@
 from datetime import timedelta
-import os
+import os, sys
+from typing import Optional
 
 import optuna
 import mlflow
 import pandas as pd
 from torch.nn import CrossEntropyLoss
 from loguru import logger
+import torch
 
-from nera.dummy import get_dummy_df
-from nera.trainer import Trainer
-from nera.models.gnn import EvalRatingRGNN
-from nera.data import DataTransformation, DataAcquisition, FROM_CSV
+from dummy import get_dummy_df
+from trainer import Trainer
+from models.gnn import EvalRatingRGNN
+from data import DataTransformation, DataAcquisition, FROM_CSV
 
-dense_dims_choice = [
-    (4, 4, 4, 4, 4), (8, 8, 8, 8, 8), (16, 16, 16, 16, 16), (32, 32, 32, 32, 32), (64, 64, 64, 64, 64),
-    (4, 8, 16, 32, 64), (4, 8, 4, 16, 4), (32, 64, 32, 128, 4), (16, 32, 4, 16, 8), (16, 4, 16, 4, 16),
-    (64, 128, 64, 128, 8), (128, 128, 128, 128, 128), None
-]
 
-conv_dims_choice = [
-    (1, 1, 1), (4, 4, 4), (8, 8, 8), (16, 16, 16), (64, 64, 64), (128, 128, 128), (128, 64, 32), (32, 32, 32),
-    (32, 16, 8), (16, 8, 4), (128, 32, 8), (64, 32, 4), (4, 64, 4), (8, 128, 8),
-    (8, 128, 64), (64, 32, 64)
-]
+def recursive_to(model, device):
+    model.to(device)  # Move the model itself to the device
+    for elem in model.gconv_layers:
+        elem.to(device)
+    for elem in model.linear_layers:
+        elem.to(device)
+
 
 
 class Evaluation:
+    best_acc = 0
+
     @staticmethod
-    def objective(trial: optuna.Trial, dataset, team_count):
-        rgnn_choice = trial.suggest_categorical("rgnn_choice", ["GCONV_GRU", "GCONV_ELMAN", "PEREVERZEVA_RGNN"])
-        rating = trial.suggest_categorical("rating", ["elo", "berrar"])
+    def objective(trial: optuna.Trial, dataset, team_count, run_name):
+        rgnn_choice = trial.suggest_categorical("rgnn_choice", ["GCONV_GRU", "GCONV_ELMAN"])
+        rating = "elo"
         K = 2
         if rgnn_choice == "GCONV_GRU":
             gconv_choice = "ChebConv"
@@ -39,46 +40,30 @@ class Evaluation:
             gconv_choice = trial.suggest_categorical("gconv_choice", ["GraphConv", "GCNConv", "ChebConv"])
 
         if gconv_choice == "ChebConv":
-            K = trial.suggest_int("K", 2, 5)
+            K = trial.suggest_int("K", 2, 12)
 
-        lr_hyper = trial.suggest_float("lr", 1e-5, 1e-1)
-        lr_rating = trial.suggest_float("lr", 1e-1, 10.)
+        lr_hyper = 0.010356261748813426
+        lr_rating = 2.56094697452784
 
-        epochs = trial.suggest_int("epochs", 1, 100)
-        val_ratio = trial.suggest_float("val_ratio", 0.1, 0.3)
+        epochs = 1
+        val_ratio = 0.075
 
-        embed_dim = trial.suggest_int("embed_dim", 1, 512)
+        embed_dim = trial.suggest_categorical("embed_dim", [2**n for n in range(1, 8)])
+        embed_dim = int(embed_dim)
 
-        correction = trial.suggest_categorical("correction", [True, False])
+        correction = True
         correction = bool(correction)
 
-        discount = trial.suggest_float("discount", 0.1, 0.99)
+        discount = 0.94
 
-        activation = trial.suggest_categorical("activation", ["relu", "lrelu", "tanh"])
+        activation = "lrelu"
 
-        dense_dims = trial.suggest_categorical("dense_dims", dense_dims_choice)
-        conv_dims = trial.suggest_categorical("conv_dims", conv_dims_choice)
+        dense_layers = trial.suggest_int("dense_layers", 0, 10)
+        conv_layers = trial.suggest_int("conv_layers", 1, 10)
 
-        dropout_rate = trial.suggest_float("dropout_rate", 0., 0.2)
+        dropout_rate = trial.suggest_float("dropout_rate", 0., 0.3)
 
-        # Log hyperparameters to MLflow
-        mlflow.log_param("lr_hyper", lr_hyper)
-        mlflow.log_param("lr_rating", lr_rating)
-        mlflow.log_param("val_ratio", val_ratio)
-        mlflow.log_param("dropout_rate", dropout_rate)
-        mlflow.log_param("embed_dim", embed_dim)
-        mlflow.log_param("correction", correction)
-        mlflow.log_param("discount", discount)
-        mlflow.log_param("activation", activation)
-        mlflow.log_param("K", K)
-        mlflow.log_param("epochs", epochs)
-        mlflow.log_param("rating", rating)
-        mlflow.log_param("gconv_choice", gconv_choice)
-        mlflow.log_param("rgnn_choice", rgnn_choice)
-        mlflow.log_param("dense_dims", dense_dims)
-        mlflow.log_param("conv_dims", conv_dims)
-
-        score = Evaluation.train(
+        score, acc = Evaluation.train(
             dataset,
             team_count,
             lr_hyper,
@@ -93,30 +78,78 @@ class Evaluation:
             rgnn_choice,
             gconv_choice,
             rating,
-            dense_dims,
-            conv_dims,
+            dense_layers,
+            conv_layers,
             dropout_rate,
         )
 
-        # Log the score to MLflow
-        mlflow.log_metric("score", score)
+        with mlflow.start_run(nested=True, run_name=run_name + f"_sub_{trial.number}"):
+            # Log hyperparameters to MLflow
+            mlflow.log_param("dropout_rate", dropout_rate)
+            mlflow.log_param("embed_dim", embed_dim)
+            mlflow.log_param("K", K)
+            mlflow.log_param("rating", rating)
+            mlflow.log_param("gconv_choice", gconv_choice)
+            mlflow.log_param("rgnn_choice", rgnn_choice)
+            mlflow.log_param("dense_layers", dense_layers)
+            mlflow.log_param("conv_layers", conv_layers)
+            # Log the score to MLflow
+            mlflow.log_metric("score", score)
+            mlflow.log_metric("acc", acc)
+
+        logger.info(f"Trial {trial.number} score: {score}, acc: {acc}  | drop {dropout_rate}, embed dim: {embed_dim}"
+                    f" K: {K}, rating: {rating}, gconv_choice: {gconv_choice}, rgnn_choice: {rgnn_choice}"
+                    f" dense_layers: {dense_layers}, conv_layers: {conv_layers} ")
 
         return score
 
     @staticmethod
     def objective_test(trial, dataset, team_count, run_name):
-        lr_hyper = trial.suggest_float("lr_hyper", 1e-5, 1e-1)
-        lr_rating = trial.suggest_float("lr_rating", 1e-1, 10.)
-
-        logger.info(f"lr_hyper {lr_hyper}, lr_rating {lr_rating}")
-
-        score = Evaluation.train(
+        obj_name = "dense layers"
+        obj_conv = "conv layers"
+        dense = trial.suggest_int(f"{obj_name}", 0, 20)
+        conv = trial.suggest_int(f"{obj_conv}", 1, 10)
+        embed = trial.suggest_categorical("embed_dim", [2**n for n in range(1, 8)])
+        score, acc = Evaluation.train(
             dataset,
             team_count,
-            lr_hyper,
-            lr_rating,
-            10,
-            0.5,
+            0.010356261748813426,
+            2.56094697452784,
+            1,
+            0.1,
+            embed,
+            0.94,
+            True,
+            "lrelu",
+            2,
+            "GConv_Elman",
+            "GCNConv",
+            "elo",
+            dense,
+            conv,
+            0,
+        )
+
+        with mlflow.start_run(nested=True, run_name=run_name + f"_sub_{trial.number}"):
+            mlflow.log_param("dense_layers", dense)
+            mlflow.log_param("conv_layers", conv)
+            mlflow.log_param("embed_dim", embed)
+            mlflow.log_metric(f"val_loss", score)
+            mlflow.log_metric("valid_acc", acc)
+        logger.info(f"Trial {trial.number} score: {score}, acc: {acc}  | dense_layers: {dense}, conv_layers: {conv} "
+                    f"embed dim: {embed}")
+
+        return score  # score when minimizing, acc when maximizing
+
+    @staticmethod
+    def objective_epochs(dataset, team_count, run_name):
+        score, _ = Evaluation.train(
+            dataset,
+            team_count,
+            0.023,
+            0.147,
+            100,
+            0.3,
             5,
             0.8,
             False,
@@ -125,19 +158,22 @@ class Evaluation:
             "GCONV_GRU",
             "ChebConv",
             "elo",
-            None,
-            (4, 4),
+            1,
+            1,
             0,
+            training_callback=Evaluation.epochs_mlflow_callback,
+            callback_kwargs={"run_name": run_name, },
         )
-        with mlflow.start_run(nested=True, run_name=run_name + f"_sub_{trial.number}"):
-            mlflow.log_param(f"lr_hyper", lr_hyper)
-            mlflow.log_param(f"lr_rating", lr_rating)
-            mlflow.log_metric(f"score", score)
-        logger.success(f"Done trial with score {score}")
 
         return score
 
-
+    @staticmethod
+    def epochs_mlflow_callback(run_name, epochs, score, acc):
+        with mlflow.start_run(nested=True, run_name=run_name + f"_sub_{1}"):
+            mlflow.log_param(f"epochs", epochs)
+            mlflow.log_metric(f"score", score)
+            mlflow.log_metric("valid_acc", acc)
+        logger.success(f"Done epoch {epochs} with score {score} and validation accuracy {acc}")
 
     @staticmethod
     def train(
@@ -155,9 +191,11 @@ class Evaluation:
             rgnn_conv: str,
             graph_conv: str,
             rating: str,
-            dense_dims: tuple,
-            conv_dims: tuple,
+            dense_layers: int,
+            conv_layers: int,
             dropout_rate: float,
+            training_callback=None,
+            callback_kwargs=None,
             **rating_kwargs
     ):
         model = EvalRatingRGNN(
@@ -173,11 +211,15 @@ class Evaluation:
             rating=rating,
             normalization=None,
             aggr="add",
-            dense_dims=dense_dims,
-            conv_dims=conv_dims,
+            dense_layers=dense_layers,
+            conv_layers=conv_layers,
             dropout_rate=dropout_rate,
             **rating_kwargs
         )
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        recursive_to(model, device)
+
         trainer = Trainer(
             dataset,
             model,
@@ -185,28 +227,33 @@ class Evaluation:
             lr_rating,
             loss_fn=CrossEntropyLoss(),
             train_ratio=1.
+            # since we are interested only in validation metrics we dont need explicit testing in the end of dataset
         )
-        trainer.train(epochs, val_ratio=val_ratio)
+        trainer.train(epochs, val_ratio=val_ratio, verbose=True, bidir=True,
+                      callback=training_callback, callback_kwarg_dict=callback_kwargs)
         metric = trainer.get_eval_metric("val_loss")
-        return metric
+        acc = trainer.get_eval_metric("val_accuracy")
+        return metric, acc
 
     @staticmethod
-    def evaluate(raw_data):
+    def evaluate(raw_data, n_trials=10, run_name="rating", experiment_name="exp"):
         transform = DataTransformation(raw_data, snapshot_duration=timedelta(days=365))
         dataset = transform.get_dataset(
             node_f_extract=False, edge_f_one_hot=True, drop_draws=True
         )
 
         # Set up an MLflow run
-        mlflow.set_experiment("test_potato")
-        run_name = "ratingGNN"
+        mlflow.set_experiment(experiment_name)
         with mlflow.start_run(run_name=run_name):
             # Set up an Optuna study
             study = optuna.create_study(direction="minimize")
 
             # Run the optimization process
             study.optimize(
-                lambda trial: Evaluation.objective_test(trial, dataset, transform.num_teams, run_name), n_trials=10)
+                lambda trial: Evaluation.objective_test(
+                    trial, dataset, transform.num_teams, run_name), n_trials=n_trials)
+
+            #Evaluation.objective_epochs(dataset, transform.num_teams, run_name)
 
             # Access the best hyperparameters found during the study
             best_params = study.best_params
@@ -219,14 +266,17 @@ class Evaluation:
 
 
 if __name__ == "__main__":
-    os.environ['MLFLOW_TRACKING_URI'] = 'http://host.docker.internal:2222'
-    #da = DataAcquisition()
-    #df = da.get_data(FROM_CSV, fname="../resources/other_leagues.csv")
-    #df['DT'] = pd.to_datetime(df['DT'], format="%Y-%m-%d %H:%M:%S")
-    #df = df.reset_index()
-    #df = df.sort_values(by='DT', ascending=False)
+    n_trials = 100 if len(sys.argv) < 2 else int(sys.argv[1])
 
-    df = get_dummy_df(0, conf="hah")
-    transform = DataTransformation(df, timedelta(days=365))
+    if torch.cuda.is_available():
+        logger.info("Will train on CUDA...")
 
-    Evaluation.evaluate(df)
+    da = DataAcquisition()
+    df = da.get_data(FROM_CSV, fname="../resources/other_leagues.csv")
+    df['DT'] = pd.to_datetime(df['DT'], format="%Y-%m-%d %H:%M:%S")
+    filtered_df = df[df['League'] == 'NBL']
+    filtered_df = filtered_df.reset_index()
+    filtered_df = filtered_df.sort_values(by='DT', ascending=False)
+
+    Evaluation.evaluate(filtered_df, n_trials, "dimensions", "layers")
+

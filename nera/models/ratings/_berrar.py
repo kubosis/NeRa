@@ -34,7 +34,7 @@ class Berrar(nn.Module):
         assert in_channels % 2 == 0 and in_channels > 0
 
         super(Berrar, self).__init__()
-        self.softmax = nn.Softmax(dim=0)
+
         if not hp_grad:
             self.alpha_h = alpha_h
             self.beta_h = beta_h

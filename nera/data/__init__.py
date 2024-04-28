@@ -10,3 +10,5 @@ from ._data_acquisition import DataAcquisition
 from ._macros import FROM_CSV, FROM_NBA_STATS, FROM_FLASHSCORE
 from ._data_saving_loading import *
 from ._data_transformation import DataTransformation
+
+from .utils import *

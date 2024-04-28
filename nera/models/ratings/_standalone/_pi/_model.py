@@ -1,4 +1,4 @@
-from nera.models.ratings._general_rating import _GeneralRating
+from ..._general_rating import _GeneralRating
 from nera.models.ratings._general_rating import *
 
 

@@ -7,7 +7,7 @@ import numpy as np
 from nera.models.ratings import EloNumerical, EloManual, EloAnalytical
 from nera.reference import RatingReference
 from nera.trainer import Trainer
-from nera.utils import generate_random_matches
+from nera.data.utils import generate_random_matches
 from nera.data import DataTransformation
 
 

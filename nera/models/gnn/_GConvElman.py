@@ -38,7 +38,6 @@ class GConvElman(torch.nn.Module):
         gconv: str = "GraphConv",
         aggr: str = "add",
         bias: bool = True,
-        init_ones_: bool = True,
         K: int = 2,
         normalization: str = "sym",
     ):

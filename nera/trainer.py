@@ -10,7 +10,7 @@ from torch_geometric_temporal.signal import (
 import numpy as np
 from loguru import logger
 
-from .models.loss import WeightedMSELoss
+from models.loss import WeightedMSELoss
 
 
 class Trainer:
@@ -19,15 +19,15 @@ class Trainer:
     """
 
     def __init__(
-        self,
-        dataset: Optional[DynamicGraphTemporalSignal] = None,
-        model: Optional[nn.Module] = None,
-        lr: float = 0.001,
-        lr_rating: float = 3.0,
-        loss_fn=WeightedMSELoss(),
-        train_ratio: float = 0.8,
-        optim=torch.optim.Adam,
-        **kwargs,
+            self,
+            dataset: Optional[DynamicGraphTemporalSignal] = None,
+            model: Optional[nn.Module] = None,
+            lr: float = 0.001,
+            lr_rating: float = 3.0,
+            loss_fn=WeightedMSELoss(),
+            train_ratio: float = 0.8,
+            optim=torch.optim.Adam,
+            **kwargs,
     ):
 
         self._train_dataset, self._test_dataset = None, None
@@ -42,6 +42,7 @@ class Trainer:
         self._lr_rating = lr_rating
         self.optim = optim
         self.model_is_rating = False
+        self.device = None
 
         if model is not None:
             self.model = model
@@ -56,6 +57,9 @@ class Trainer:
         self.train_loss = float("inf")
         self.test_accuracy = 0
         self.test_loss = float("inf")
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device
 
     @property
     def model(self) -> nn.Module:
@@ -90,7 +94,6 @@ class Trainer:
                 ],
                 lr=self._lr,
             )
-
             for m in model.gconv_layers:
                 self.optim.add_param_group({"params": m.parameters(), "lr": self._lr})
             if model.linear_layers is not None:
@@ -98,9 +101,6 @@ class Trainer:
                     self.optim.add_param_group({"params": m.parameters(), "lr": self._lr})
             if model.rating is not None:
                 self.optim.add_param_group({"params": model.rating.parameters(), "lr": self._lr})
-
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(device)
 
     @model.deleter
     def model(self):
@@ -153,12 +153,16 @@ class Trainer:
         self.model = self.model
 
     def train(
-        self, epochs: int = 100, verbose: bool = False, val_ratio: float = 0.0, **kwargs
+            self, epochs: int = 100, verbose: bool = False, val_ratio: float = 0.0,
+            callback=None, callback_kwarg_dict=None, **kwargs
     ) -> Sequence[np.ndarray]:
 
         assert self.model is not None, "Model has to be set"
         assert self.dataset is not None, "Dataset has to be set"
         assert 0 <= val_ratio < 1, "Validation ratio has to be in [0, 1)"
+
+        if callback is not None:
+            logger.info("Starting training with registered callback")
 
         training_accuracy = []
         validation_accuracy = []
@@ -167,10 +171,12 @@ class Trainer:
 
             trn_acc, trn_loss, trn_count = 0, 0, 0
             val_acc, val_loss, val_count = 0, 0, 0
+            if not self.model_is_rating:
+                self.model.reset_index()
             for time, snapshot in enumerate(self._train_dataset):
-                matches = snapshot.edge_index
-                outcomes = snapshot.edge_attr  # edge weight encodes the match outcome
-                match_points = snapshot.match_points
+                matches = snapshot.edge_index.to(self.device)
+                outcomes = snapshot.edge_attr.to(self.device)  # edge weight encodes the match outcome
+                match_points = snapshot.match_points.to(self.device)
 
                 # split train / val data
                 matches_count = matches.shape[1]
@@ -206,7 +212,7 @@ class Trainer:
                         )
                     else:
                         val_acc_i, val_loss_i = self._train_gnn(
-                            matches_val, y_val, match_pts_val, verbose, validation=True
+                            matches_val, y_val, match_pts_val, verbose, validation=True, **kwargs
                         )
                 val_acc += val_acc_i
                 val_loss += val_loss_i
@@ -215,12 +221,12 @@ class Trainer:
 
             if verbose:
                 logger.info(
-                    f"[TRN] Epoch: {epoch+1}, training loss: {trn_loss:.3f}, "
+                    f"[TRN] Epoch: {epoch + 1}, training loss: {trn_loss:.3f}, "
                     f"training accuracy: {trn_acc / trn_count * 100:.2f}%"
                 )
                 if val_count != 0:
                     logger.info(
-                        f"[VAL] Epoch: {epoch+1}, validation loss: {val_loss:.3f}, "
+                        f"[VAL] Epoch: {epoch + 1}, validation loss: {val_loss:.3f}, "
                         f"validation accuracy: {val_acc / val_count * 100:.2f}%"
                     )
             training_accuracy.append(trn_acc / trn_count)
@@ -232,6 +238,12 @@ class Trainer:
                 self.val_accuracy = val_acc / val_count
                 self.val_loss = val_loss
 
+            if callback is not None:
+                callback_kwarg_dict["epochs"] = epoch
+                callback_kwarg_dict["score"] = self.val_loss
+                callback_kwarg_dict["acc"] = self.val_accuracy
+                callback(**callback_kwarg_dict)
+
         return [np.array(training_accuracy), np.array(validation_accuracy)]
 
     def _loss_fn(self, y, y_hat, weight=None):
@@ -242,7 +254,7 @@ class Trainer:
             return self.loss_fn(y_hat, y)
 
     def _create_edge_index_and_weight(
-        self, match, y, validation: bool = False, bidir: bool = True
+            self, match, y, validation: bool = False, bidir: bool = True
     ) -> tuple[Tensor, Optional[Tensor]]:
         assert len(y) in [
             2,
@@ -288,6 +300,9 @@ class Trainer:
             weight = None
         else:
             weight *= 0.1
+            weight = weight.to(self.device)
+
+        index = index.to(self.device)
         return index, weight
 
     def _step(self):
@@ -301,21 +316,21 @@ class Trainer:
         )
 
     def _train_gnn(
-        self,
-        matches,
-        outcomes,
-        match_points,
-        verbose,
-        validation: bool = False,
-        clip_grad: bool = False,
-        bidir: bool = False,
+            self,
+            matches,
+            outcomes,
+            match_points,
+            verbose,
+            validation: bool = False,
+            clip_grad: bool = False,
+            bidir: bool = False,
     ) -> tuple[int, float]:
         if validation:
             self.model.eval()
+            self.model.store_index(False)
         else:
             self.model.train()
-
-        self.model.reset_index()
+            self.model.store_index(True)
 
         ite = 0
         accuracy, loss_acc = 0, 0
@@ -328,7 +343,9 @@ class Trainer:
                 match, y, validation, bidir=bidir
             )
 
-            y_hat = self.model(edge_index, home, away, edge_weight)
+            home_pts, away_pts = match_points[m, :]
+
+            y_hat = self.model(edge_index, home, away, edge_weight, home_pts, away_pts)
 
             # y.requires_grad = True
 
@@ -361,13 +378,13 @@ class Trainer:
         return accuracy, loss_acc
 
     def _train_rating(
-        self,
-        matches,
-        outcomes,
-        match_points,
-        validation: bool = False,
-        clip_grad: bool = False,
-        **kwargs,
+            self,
+            matches,
+            outcomes,
+            match_points,
+            validation: bool = False,
+            clip_grad: bool = False,
+            **kwargs,
     ) -> tuple[int, float]:
         if self.model.type == "elo":
             return self._train_elo(
@@ -383,7 +400,7 @@ class Trainer:
             raise RuntimeError("Unknown rating model type")
 
     def _train_elo(
-        self, matches, outcomes, match_points, validation, clip_grad, **kwargs
+            self, matches, outcomes, match_points, validation, clip_grad, **kwargs
     ) -> tuple[int, float]:
         if validation:
             self.model.eval()
@@ -397,12 +414,12 @@ class Trainer:
         for m in range(matches.shape[1]):
             match = matches[:, m]
 
-            y_hat = torch.mean(self.model(match))
+            y_hat = self.model(match)
             y = outcomes[m, :]  # edge weight encodes the match outcome
             if not self.model.is_manual:
                 y.requires_grad = True
 
-            target = torch.argmax(y) / 2.0
+            target = torch.argmax(y)
             target = target.detach()
             prediction = y_hat
 
@@ -429,13 +446,13 @@ class Trainer:
         return accuracy, loss_acc
 
     def _train_berrar(
-        self,
-        matches,
-        outcomes,
-        match_points,
-        validation: bool = False,
-        clip_grad: bool = False,
-        **kwargs,
+            self,
+            matches,
+            outcomes,
+            match_points,
+            validation: bool = False,
+            clip_grad: bool = False,
+            **kwargs,
     ) -> tuple[int, float]:
         if validation:
             self.model.eval()

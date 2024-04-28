@@ -20,7 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from nera.utils import process_kwargs
+from .utils import process_kwargs
 from ._macros import *
 from ._data_saving_loading import *
 

@@ -6,9 +6,8 @@ from pathlib import Path
 from loguru import logger
 from sqlalchemy import create_engine
 from sshtunnel import SSHTunnelForwarder
-import socket
 
-from nera.data._macros import PATH
+from ._macros import PATH
 
 __all__ = [
     "save_to_pickle",
@@ -20,7 +19,7 @@ __all__ = [
     "ssh_save_data_to_postgres",
 ]
 
-from nera.utils import ssh_tunnel
+from .utils import ssh_tunnel
 
 
 def save_to_pickle(fname: str, data):

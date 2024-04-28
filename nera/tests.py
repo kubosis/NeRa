@@ -1,25 +1,20 @@
 # scripts for easier manipulation
-import torch
 from datetime import timedelta
 from itertools import product
 
-import numpy as np
-import torch_geometric.nn.aggr as aggr
+import pandas as pd
 
-from nera.data import *
-from nera.dummy import get_dummy_df, Dummy
-from nera.models.ratings import (
-    EloAnalytical,
-    EloManual,
-    EloNumerical,
+from data import *
+from dummy import get_dummy_df, Dummy
+from models.ratings import (
     EloSymbolical,
     Elo,
     Berrar,
+    EloManual
 )
-from nera.reference import *
-from nera.models.gnn import GCONVCheb, RGNN, GConvElman, RatingGNN, EvalRatingRGNN
-from nera.trainer import Trainer
-from nera.utils import print_rating_diff, generate_random_matches
+from reference import *
+from models.gnn import GCONVCheb, RGNN, GConvElman, RatingGNN, EvalRatingRGNN
+from trainer import Trainer
 
 
 # simple testing and evaluation functions for development ----------------------------------------------
@@ -161,7 +156,7 @@ def test_eval_rating_gnn(transform, **kwargs):
         node_f_extract=False, edge_f_one_hot=True, drop_draws=True
     )
 
-    embed_dim = 1
+    embed_dim = 2
 
     model = EvalRatingRGNN(
         team_count=transform.num_teams,
@@ -173,10 +168,10 @@ def test_eval_rating_gnn(transform, **kwargs):
         rgnn_conv="GCONV_GRU",
         normalization="rw",
         graph_conv="ChebConv",
-        dense_dims=None,
-        conv_dims=(1,),
+        dense_layers=2,
+        conv_layers=2,
         dropout_rate=0.1,
-        rating="elo",
+        rating="pi",
     )
 
     trainer = Trainer(
@@ -188,7 +183,7 @@ def test_eval_rating_gnn(transform, **kwargs):
         train_ratio=1,
     )
 
-    _ = trainer.train(epochs=100, val_ratio=0, verbose=True, bidir=True)
+    _ = trainer.train(epochs=100, val_ratio=0.4, verbose=True, bidir=True)
     print_embedding_progression(model, trainer, transform.num_teams, True, embed_dim)
 
 
@@ -236,12 +231,32 @@ def test_dummy_id_one(
 # ---------------------------------------------------------------------------------------------------
 
 
+def eval_manual_elo(df):
+    transform = DataTransformation(df, timedelta(days=365))
+    dataset = transform.get_dataset(
+        node_f_extract=False, edge_f_one_hot=True, drop_draws=True
+    )
+
+    elo = EloManual(transform.num_teams)
+    trainer = Trainer(dataset, elo)
+
+    trainer.train(epochs=1, verbose=True, val_ratio=0.075)
+
+
 def main():
     # torch.manual_seed(42)
-    test_dummy_id_one(
-        test_fn=test_eval_rating_gnn, conf="hah", dummy_id=0
-    )
+    # test_dummy_id_one(
+    #    test_fn=test_eval_rating_gnn, conf="hah", dummy_id=0
+    # )
     # test_dummy_id_all(test_fn=gnn_rating_test, rating='berrar', verbose=True)
+    da = DataAcquisition()
+    df = da.get_data(FROM_CSV, fname="../resources/other_leagues.csv")
+    df['DT'] = pd.to_datetime(df['DT'], format="%Y-%m-%d %H:%M:%S")
+    filtered_df = df[df['League'] == 'NBL']
+    filtered_df = filtered_df.reset_index()
+    filtered_df = filtered_df.sort_values(by='DT', ascending=False)
+
+    eval_manual_elo(filtered_df)
 
 
 if __name__ == "__main__":

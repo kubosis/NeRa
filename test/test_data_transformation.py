@@ -3,7 +3,7 @@ from datetime import timedelta
 import random
 
 from nera.data import DataTransformation
-from nera.utils import generate_random_matches
+from nera.data.utils import generate_random_matches
 
 
 class TestDataTransformation(unittest.TestCase):

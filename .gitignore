@@ -11,3 +11,6 @@ resources/
 nera.egg-info/
 
 nera/mlruns/
+mlruns/
+
+sync.sh

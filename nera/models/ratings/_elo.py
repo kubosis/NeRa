@@ -36,12 +36,8 @@ class Elo(nn.Module):
             self.c = c
             self.d = d
         else:
-            self.c = nn.Parameter(
-                torch.tensor(c, dtype=torch.float), requires_grad=True
-            )
-            self.d = nn.Parameter(
-                torch.tensor(d, dtype=torch.float), requires_grad=True
-            )
+            self.c = nn.Parameter(torch.tensor(c, dtype=torch.float), requires_grad=True)
+            self.d = nn.Parameter(torch.tensor(d, dtype=torch.float), requires_grad=True)
 
     def forward(self, home, away):
         assert home.shape == away.shape
