@@ -14,3 +14,5 @@ nera/mlruns/
 mlruns/
 
 sync.sh
+
+.run/
