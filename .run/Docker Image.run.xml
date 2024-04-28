@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Docker Image" type="docker-deploy" factoryName="docker-image" server-name="Docker_potato">
+    <deployment type="docker-image">
+      <settings>
+        <option name="imageTag" value="gnn_sport_prediction" />
+        <option name="containerName" value="gnn_sport_prediction" />
+      </settings>
+    </deployment>
+    <method v="2" />
+  </configuration>
+</component>
