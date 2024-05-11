@@ -1,6 +1,7 @@
 from typing import Optional, Sequence
 
 import torch
+import torch.nn.functional as F
 from torch import Tensor
 import torch.nn as nn
 from torch_geometric_temporal.signal import (
@@ -324,6 +325,7 @@ class Trainer:
             validation: bool = False,
             clip_grad: bool = False,
             bidir: bool = False,
+            gamma: float = 1.
     ) -> tuple[int, float]:
         if validation:
             self.model.eval()
@@ -338,12 +340,19 @@ class Trainer:
             self.optim.zero_grad()
 
             home, away = match = matches[:, m]
-            y = outcomes[m, :]
+            home_pts, away_pts = match_points[m, :]
+            if self.model.rating_str == "elo":
+                y = outcomes[m, :].to(torch.float)
+            else:
+                y = match_points[m, :].to(torch.float)
+                y = F.normalize(y, p=float('inf'), dim=0)
+
             edge_index, edge_weight = self._create_edge_index_and_weight(
                 match, y, validation, bidir=bidir
             )
 
-            home_pts, away_pts = match_points[m, :]
+
+            point_diff = torch.abs(home_pts - away_pts)
 
             y_hat = self.model(edge_index, home, away, edge_weight, home_pts, away_pts)
 
@@ -354,7 +363,7 @@ class Trainer:
 
             accuracy += 1 if abs(target - prediction) < 0.5 else 0
 
-            loss = self._loss_fn(y, y_hat)
+            loss = self._loss_fn(y, y_hat, (point_diff + 1) ** gamma)
             loss.retains_grad_ = True
             loss_acc += loss.item()
 

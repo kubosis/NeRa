@@ -49,6 +49,7 @@ class Berrar(nn.Module):
             self.beta_a = nn.Parameter(torch.tensor(beta_a, dtype=torch.float))
             self.bias_h = nn.Parameter(torch.tensor(bias_h, dtype=torch.float))
             self.bias_a = nn.Parameter(torch.tensor(bias_a, dtype=torch.float))
+        self.in_channels = in_channels
 
     def forward(self, home, away):
         assert len(home) == len(away) == self.in_channels

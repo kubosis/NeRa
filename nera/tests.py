@@ -13,7 +13,7 @@ from models.ratings import (
     EloManual
 )
 from reference import *
-from models.gnn import GCONVCheb, RGNN, GConvElman, RatingGNN, EvalRatingRGNN
+from models.gnn import GCONVCheb, RGNN, GConvElman, RatingGNN, RatingRGNN
 from trainer import Trainer
 
 
@@ -158,7 +158,7 @@ def test_eval_rating_gnn(transform, **kwargs):
 
     embed_dim = 2
 
-    model = EvalRatingRGNN(
+    model = RatingRGNN(
         team_count=transform.num_teams,
         embed_dim=embed_dim,
         target_dim=2,
@@ -171,7 +171,7 @@ def test_eval_rating_gnn(transform, **kwargs):
         dense_layers=2,
         conv_layers=2,
         dropout_rate=0.1,
-        rating="pi",
+        rating="elo",
     )
 
     trainer = Trainer(
@@ -183,7 +183,7 @@ def test_eval_rating_gnn(transform, **kwargs):
         train_ratio=1,
     )
 
-    _ = trainer.train(epochs=100, val_ratio=0.4, verbose=True, bidir=True)
+    _ = trainer.train(epochs=1, val_ratio=0.2, verbose=True, bidir=True)
     print_embedding_progression(model, trainer, transform.num_teams, True, embed_dim)
 
 
@@ -240,7 +240,7 @@ def eval_manual_elo(df):
     elo = EloManual(transform.num_teams)
     trainer = Trainer(dataset, elo)
 
-    trainer.train(epochs=1, verbose=True, val_ratio=0.075)
+    trainer.train(epochs=1, verbose=True, val_ratio=0.1)
 
 
 def main():
@@ -255,8 +255,8 @@ def main():
     filtered_df = df[df['League'] == 'NBL']
     filtered_df = filtered_df.reset_index()
     filtered_df = filtered_df.sort_values(by='DT', ascending=False)
-
-    eval_manual_elo(filtered_df)
+    transform = DataTransformation(filtered_df, timedelta(days=365))
+    test_eval_rating_gnn(transform)
 
 
 if __name__ == "__main__":

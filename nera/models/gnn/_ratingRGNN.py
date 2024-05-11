@@ -2,6 +2,7 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch_geometric_temporal.nn.recurrent import GConvGRU, A3TGCN
 from torch_geometric.nn import GraphConv, SAGEConv, GCNConv, ChebConv
 
@@ -10,7 +11,7 @@ from ._reccurent_gnn import RecurrentGNN
 from ..ratings import Elo, Berrar, Pi
 
 
-class EvalRatingRGNN(RecurrentGNN):
+class RatingRGNN(RecurrentGNN):
     _activations = {
         "relu": nn.ReLU(),
         "tanh": nn.Tanh(),
@@ -53,12 +54,12 @@ class EvalRatingRGNN(RecurrentGNN):
 
         assert rgnn_conv.upper() in ["GCONV_GRU", "GCONV_ELMAN"]
         assert graph_conv in ["GraphConv", "GCNConv", "ChebConv"]
-        assert rating in ["elo", "berrar", "pi"]
+        assert rating in ["elo", "berrar", "pi", None]
 
         assert embed_dim % 2 == 0 or rating == "elo"  # since berrar and pi needs 2*n values for each team
         assert conv_layers > 0 and dense_layers >= 0
 
-        super(EvalRatingRGNN, self).__init__(discount, debug, correction)
+        super(RatingRGNN, self).__init__(discount, debug, correction)
 
         self.team_count = team_count
 
@@ -80,7 +81,7 @@ class EvalRatingRGNN(RecurrentGNN):
 
         # create graph convolution recurrent layers
         self.gconv_layers = None
-        self._create_rgnn_layers(rgnn_conv, K, normalization, graph_conv, 1)
+        self._create_rgnn_layers(rgnn_conv, K, normalization, graph_conv)
 
         # create rating layer
         self.rating_str = rating
@@ -98,16 +99,19 @@ class EvalRatingRGNN(RecurrentGNN):
             # since elo already gives probability no need to use softmax
             self.out_layer = nn.Identity(self.target_dim)
         else:
-            self.out_layer = nn.Softmax(dim=0)
+            self.out_layer = RescaleByMax()
 
     def _resolve_rating(self, rating: Optional[str], **rating_kwargs):
         in_channels = self.rating_dim
-        rtg = self._rating[rating](in_channels=in_channels, **rating_kwargs)
+        if rating is not None:
+            rtg = self._rating[rating](in_channels=in_channels, **rating_kwargs)
+        else:
+            rtg = None
         return rtg
 
     def _create_linear_layers(self):
         sequence = []
-        in_channels = 2 * self.rating_dim if self.rating_str == "elo" else self.rating_dim
+        in_channels = 2 * self.rating_dim if self.rating_str in ["elo", None] else self.rating_dim
         if self.dense_layers > 0:
             sequence.append(nn.Linear(in_channels, self.rating_dim))
             for i in range(1, self.dense_layers):
@@ -120,7 +124,7 @@ class EvalRatingRGNN(RecurrentGNN):
         self.linear_layers = sequence
 
     def _create_rgnn_layers(
-            self, rgnn_conv: str, K: int, normalization: str, gconv: str, periods: int
+            self, rgnn_conv: str, K: int, normalization: str, gconv: str
     ):
         sequence = []
         if rgnn_conv.upper() == "GCONV_GRU":
@@ -154,7 +158,7 @@ class EvalRatingRGNN(RecurrentGNN):
             "in_channels": self.embed_dim,
             "out_channels": self.rating_dim,
         }
-        if gconv == "GraphConv" or gconv == "SAGEConv":
+        if gconv == "GraphConv":
             # for our purposes we really just consider add
             _model_params["aggr"] = self.aggr
         if gconv == "ChebConv":
@@ -174,17 +178,26 @@ class EvalRatingRGNN(RecurrentGNN):
 
         # rating
         h_rtg, a_rtg = h[home], h[away]
-        if self.rating_str == "pi":
-            h = self.rating(h_rtg, a_rtg, home_goals, away_goals)
+        if self.rating_str is None:
+            # no rating layer, just MLP prediction
+            h = torch.cat([a_rtg, h_rtg], dim=0)
         else:
             h = self.rating(h_rtg, a_rtg)
 
-        h = self.dropout(h)
-
         # linear layers if any
+        i = 0
         for lin in self.linear_layers:
+            i += 1
             h = lin(h)
             h = self.activation(h)
+            # no dropout before output
+            h = self.dropout(h) if i != len(self.linear_layers) else h
 
         h = self.out_layer(h)
         return h
+
+
+class RescaleByMax(nn.Module):
+    def forward(self, x):
+        max_value = F.normalize(x, p=float('inf'), dim=0)
+        return x / max_value

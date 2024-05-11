@@ -6,7 +6,7 @@ class Elo(nn.Module):
     """
     Elo with autograd numerical backward pass (for development details see _standalone/_elo/*.py)
 
-    Loss function should be weighted MSE. Weight is the goal difference in the match raised to the power of
+    Loss function should be weighted MSE, where Weight is the goal difference in the match raised to the power of
     EloAutoGrad.gamma parameter or CrossEntropyLoss. In case of CrossEntropyLoss the goal difference is
     not accounted for.
 
@@ -32,12 +32,8 @@ class Elo(nn.Module):
         super(Elo, self).__init__()
         self.gamma = gamma
         self.in_channels = in_channels
-        if not hp_grad:
-            self.c = c
-            self.d = d
-        else:
-            self.c = nn.Parameter(torch.tensor(c, dtype=torch.float), requires_grad=True)
-            self.d = nn.Parameter(torch.tensor(d, dtype=torch.float), requires_grad=True)
+        self.c = nn.Parameter(torch.tensor(c, dtype=torch.float), requires_grad=hp_grad)
+        self.d = nn.Parameter(torch.tensor(d, dtype=torch.float), requires_grad=hp_grad)
 
     def forward(self, home, away):
         assert home.shape == away.shape

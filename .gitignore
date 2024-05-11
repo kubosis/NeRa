@@ -7,7 +7,6 @@ run_conf.txt
 
 resources/.~lock.*.csv#
 
-resources/
 nera.egg-info/
 
 nera/mlruns/
