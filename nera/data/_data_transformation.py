@@ -23,7 +23,10 @@ class DataTransformation:
             "Winner",
             "Home_points",
             "Away_points",
+            "Season"
         ]
+        if "league_years" in df.columns:
+            df.rename(columns={'league_years': 'Season'}, inplace=True)
         self.df: pd.DataFrame = df.loc[:, df.columns.intersection(needed_columns)]
         self.team_mapping: dict = {}
         self.inv_team_mapping: dict = {}
@@ -34,9 +37,8 @@ class DataTransformation:
 
         self.start_date = min(self.df["DT"])
         self.end_date = max(self.df["DT"]) + timedelta(days=1)
-        self.snapshot_count = int(
-            np.ceil((self.end_date - self.start_date) / self.delta)
-        )
+
+        self.snapshots = list(np.sort(self.df["Season"].unique()))
 
     def _create_teams_mapping(self) -> None:
         teams = np.sort(pd.concat([self.df["Home"], self.df["Away"]], axis=0).unique())
@@ -84,10 +86,8 @@ class DataTransformation:
 
         i = 0
         last_df_i = None
-        for _ in range(self.snapshot_count):
-            df_i = self.df[
-                ((start_date + delta >= self.df["DT"]) & (start_date <= self.df["DT"]))
-            ]
+        for season in self.snapshots:
+            df_i = self.df[self.df["Season"] == season]
             if last_df_i is not None:
                 # filter out those matches already present in last snapshot
                 df_i = df_i.drop(last_df_i.index, errors="ignore")
@@ -181,10 +181,8 @@ class DataTransformation:
 
         one_hot_dim = 3 if use_draws else 2
         last_df_i = None
-        for _ in range(self.snapshot_count):
-            df_i = self.df[
-                ((self.df["DT"] >= start_date) & (self.df["DT"] < start_date + delta))
-            ]
+        for season in self.snapshots:
+            df_i = self.df[self.df["Season"] == season]
             if last_df_i is not None:
                 # filter out those matches already present in last snapshot
                 df_i = df_i.drop(last_df_i.index, errors="ignore")
@@ -269,7 +267,7 @@ class DataTransformation:
                 node_f_discount, node_f_draws, verbose
             )
         else:
-            node_features = [None for _ in range(self.snapshot_count)]
+            node_features = [None for _ in range(len(self.snapshots))]
 
         # 4) extract edges and edge features
         use_draws = not drop_draws

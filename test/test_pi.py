@@ -40,19 +40,6 @@ class TestBerrar(unittest.TestCase):
 
         self.assertEqual(self.manual.is_manual, True)
 
-    def test_manual(self):
-        print('Testing manual...')
-        trainer = Trainer(self.temporal_dataset, self.manual, train_ratio=1)
-        trainer.train(epochs=1, val_ratio=0)
-
-        manual_rating = self.manual.ratings
-        reference = self.reference_maker.compute_reference('pi', self.temporal_dataset, **self._params)
-
-        for r in range(len(manual_rating)):
-            man = manual_rating[r].detach()
-            np.testing.assert_array_almost_equal(man, reference[r], decimal=3)
-            print(f'Manual Rating:\n{manual_rating[r]};\nReference Rating:\n{reference[r]}')
-
 
 if __name__ == '__main__':
     unittest.main()

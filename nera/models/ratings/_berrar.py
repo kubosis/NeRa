@@ -13,7 +13,7 @@ class Berrar(nn.Module):
     def __init__(
         self,
         in_channels: int = 2,
-        alpha_h: float = 80.0,
+        alpha_h: float = 80.0,  # basketball 80, football 3.6, am. football ?
         beta_h: float = 2.0,
         bias_h: float = 0.0,
         alpha_a: float = 80.0,
@@ -35,21 +35,14 @@ class Berrar(nn.Module):
 
         super(Berrar, self).__init__()
 
-        if not hp_grad:
-            self.alpha_h = alpha_h
-            self.beta_h = beta_h
-            self.alpha_a = alpha_a
-            self.beta_a = beta_a
-            self.bias_h = bias_h
-            self.bias_a = bias_a
-        else:
-            self.alpha_h = nn.Parameter(torch.tensor(alpha_h, dtype=torch.float))
-            self.beta_h = nn.Parameter(torch.tensor(beta_h, dtype=torch.float))
-            self.alpha_a = nn.Parameter(torch.tensor(alpha_a, dtype=torch.float))
-            self.beta_a = nn.Parameter(torch.tensor(beta_a, dtype=torch.float))
-            self.bias_h = nn.Parameter(torch.tensor(bias_h, dtype=torch.float))
-            self.bias_a = nn.Parameter(torch.tensor(bias_a, dtype=torch.float))
         self.in_channels = in_channels
+
+        self.alpha_h = nn.Parameter(torch.tensor(alpha_h, dtype=torch.float, requires_grad=hp_grad))
+        self.beta_h = nn.Parameter(torch.tensor(beta_h, dtype=torch.float, requires_grad=hp_grad))
+        self.alpha_a = nn.Parameter(torch.tensor(alpha_a, dtype=torch.float, requires_grad=hp_grad))
+        self.beta_a = nn.Parameter(torch.tensor(beta_a, dtype=torch.float, requires_grad=hp_grad))
+        self.bias_h = nn.Parameter(torch.tensor(bias_h, dtype=torch.float, requires_grad=hp_grad))
+        self.bias_a = nn.Parameter(torch.tensor(bias_a, dtype=torch.float, requires_grad=hp_grad))
 
     def forward(self, home, away):
         assert len(home) == len(away) == self.in_channels

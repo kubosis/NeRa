@@ -38,10 +38,7 @@ def print_rating_diff(
     eps: float = 1e-2,
 ):
     assert (
-        hasattr(rating1, "is_rating")
-        and rating1.is_rating
-        and hasattr(rating2, "is_rating")
-        and rating2.is_rating
+        hasattr(rating1, "is_rating") and rating1.is_rating and hasattr(rating2, "is_rating") and rating2.is_rating
     )
 
     numerical = rating1
@@ -155,11 +152,13 @@ def generate_random_matches(
         away_points.append(rand_away)
 
     dt = []
+    season = []
     delta1 = timedelta(seconds=1)
     delta2 = timedelta(days=366)
     now = datetime.now()
     for i in range(season_count):
-        dt.extend([*[now - i * delta2 + j * delta1 for j in range(matches_per_season)]])
+        dt.extend([*[now - i * delta2 + j * delta1 for j in range(matches_per_season)]][::-1])
+        season.extend([*["season" + str(i) for _ in range(matches_per_season)]])
 
     data = pd.DataFrame(
         {
@@ -170,6 +169,7 @@ def generate_random_matches(
             "Home_points": home_points,
             "Away_points": away_points,
             "League": [*(match_count * ["liga"])],
+            "Season": season[::-1],
         }
     )
     data = data.sort_values(by="DT", ascending=False)

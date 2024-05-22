@@ -17,8 +17,8 @@ class Elo(nn.Module):
             self,
             in_channels: int,
             gamma: float = 2.0,
-            c: float = 3.0,
-            d: float = 0.8,
+            c: float = 10.0,
+            d: float = 400.,
             hp_grad: bool = False,
     ):
         """

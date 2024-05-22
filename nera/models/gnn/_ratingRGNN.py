@@ -132,9 +132,7 @@ class RatingRGNN(RecurrentGNN):
             m.to(self.device)
             sequence.append(m)
             for i in range(1, self.conv_layers):
-                m = GConvGRU(
-                        self.rating_dim, self.rating_dim, K, normalization=normalization
-                    )
+                m = GConvGRU(self.rating_dim, self.rating_dim, K, normalization=normalization)
                 m.to(self.device)
                 sequence.append(m)
         elif rgnn_conv.upper() == "GCONV_ELMAN":
@@ -199,5 +197,6 @@ class RatingRGNN(RecurrentGNN):
 
 class RescaleByMax(nn.Module):
     def forward(self, x):
-        max_value = F.normalize(x, p=float('inf'), dim=0)
-        return x / max_value
+        max_abs_value = torch.max(torch.abs(x))
+        rescaled_x = x / max_abs_value
+        return rescaled_x

@@ -38,10 +38,7 @@ def print_rating_diff(
     eps: float = 1e-2,
 ):
     assert (
-        hasattr(rating1, "is_rating")
-        and rating1.is_rating
-        and hasattr(rating2, "is_rating")
-        and rating2.is_rating
+        hasattr(rating1, "is_rating") and rating1.is_ratin and hasattr(rating2, "is_rating") and rating2.is_rating
     )
 
     numerical = rating1

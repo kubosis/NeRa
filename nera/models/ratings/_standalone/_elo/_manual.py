@@ -45,9 +45,7 @@ class EloManual(EloModel):
             a_i = self.away
 
             update = (
-                self.k
-                * ((1 + goal_difference) ** self.gamma)
-                * (match_outcome - self.E_H)
+                self.k * ((1 + goal_difference) ** self.gamma) * (match_outcome - self.E_H)
             )
 
             self.elo[h_i] += update

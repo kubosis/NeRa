@@ -2,17 +2,21 @@ import unittest
 from datetime import timedelta
 import random
 
+import pandas as pd
+
 from nera.data import DataTransformation
 from nera.data.utils import generate_random_matches
 
 
 class TestDataTransformation(unittest.TestCase):
     def setUp(self):
-        self.team_count = random.randint(10, 20)
-        self.number_of_seasons = random.randint(50, 100)
-        self.matches_per_season = random.randint(1000, 5000)
+        self.team_count = 8
+        self.number_of_seasons = 10
+        self.matches_per_season = 100
 
-        self.dataset = generate_random_matches(self.team_count, self.matches_per_season, self.number_of_seasons)
+        x = self.dataset = generate_random_matches(self.team_count, self.matches_per_season, self.number_of_seasons)
+        self.dataset['DT'] = pd.to_datetime(self.dataset['DT'], format="%Y-%m-%d %H:%M:%S")
+        self.dataset = self.dataset.sort_values(by='DT', ascending=False)
         self.transform = DataTransformation(self.dataset, timedelta(days=365))
         self.temporal_dataset = self.transform.get_dataset()
 

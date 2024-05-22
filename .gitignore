@@ -15,3 +15,8 @@ mlruns/
 sync.sh
 
 .run/
+
+*.log
+*.npy
+.coverage
+coverage.xml

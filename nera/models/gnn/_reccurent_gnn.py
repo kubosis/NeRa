@@ -29,7 +29,7 @@ class RecurrentGNN(nn.Module):
 
     def _copy_index(self, edge_index, edge_weight, h):
         if not self.store:
-            #self._copy_index_val(edge_index, edge_weight)
+            # self._copy_index_val(edge_index, edge_weight)
             return
 
         if self.debug:
@@ -57,7 +57,7 @@ class RecurrentGNN(nn.Module):
 
         # cutoff
         max_val = new_edge_weight[0].item()
-        cutoff_mask = self.H_edge_weight > max_val * 1e-10
+        cutoff_mask = self.H_edge_weight > max_val * 1e-14
         self.H_edge_weight = self.H_edge_weight[cutoff_mask]
         self.H_edge_index = self.H_edge_index[:, cutoff_mask]
 

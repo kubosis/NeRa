@@ -11,7 +11,7 @@ from torch_geometric_temporal.signal import (
 import numpy as np
 from loguru import logger
 
-from models.loss import WeightedMSELoss
+from .models.loss import WeightedMSELoss
 
 
 class Trainer:
@@ -186,12 +186,14 @@ class Trainer:
                 matches_train = matches[:, :trn_size]
                 y_train = outcomes[:trn_size, :]
                 match_pts_trn = match_points[:trn_size, :]
-                trn_count += matches_train.shape[1]
+                trn_count_i = matches_train.shape[1]
+                trn_count += trn_count_i
 
                 matches_val = matches[:, trn_size:]
                 y_val = outcomes[trn_size:, :]
                 match_pts_val = match_points[trn_size:, :]
-                val_count += matches_val.shape[1]
+                val_count_i = matches_val.shape[1]
+                val_count += val_count_i
 
                 # training
                 if self.model_is_rating:
@@ -218,6 +220,29 @@ class Trainer:
                 val_acc += val_acc_i
                 val_loss += val_loss_i
 
+                if val_count_i != 0:
+                    validation_accuracy.append(val_acc_i / val_count_i)
+
+                # train the model on the data that validated it (only if epochs == 1)
+                if epochs == 1:
+                    if self.model_is_rating:
+                        trn_acc_ii, trn_loss_ii = self._train_rating(
+                            matches_val, y_val, match_pts_val, **kwargs
+                        )
+                    else:
+                        trn_acc_ii, trn_loss_ii = self._train_gnn(
+                            matches_val, y_val, match_pts_val, verbose, **kwargs
+                        )
+
+                    trn_acc += trn_acc_ii
+                    trn_loss += trn_loss_ii
+                    trn_acc_i += trn_acc_ii
+                    trn_loss_i += trn_loss_ii
+
+                    trn_count_i += val_count_i
+
+                training_accuracy.append(trn_acc_i / trn_count_i)
+
                 self.model.H = None
 
             if verbose:
@@ -230,11 +255,10 @@ class Trainer:
                         f"[VAL] Epoch: {epoch + 1}, validation loss: {val_loss:.3f}, "
                         f"validation accuracy: {val_acc / val_count * 100:.2f}%"
                     )
-            training_accuracy.append(trn_acc / trn_count)
+
             self.train_accuracy = trn_acc / trn_count
             self.train_loss = trn_loss
             if val_count != 0:
-                validation_accuracy.append(val_acc / val_count)
                 # store for later metric inspection
                 self.val_accuracy = val_acc / val_count
                 self.val_loss = val_loss
@@ -284,18 +308,19 @@ class Trainer:
                     index = torch.flip(match, dims=[0])
                     weight = torch.tensor([1.0], dtype=torch.float)
         else:
-            # draws used -> only 1 direction of edges - from looser to winner
+            # draws used
             if outcome == 0:
                 # away win
-                index = match
+                index = torch.cat((match, torch.flip(match, dims=[0])), dim=1)
+                weight = torch.tensor([+1, -1], dtype=torch.float)
             elif outcome == 1:
                 # draw
                 index = torch.cat((match, torch.flip(match, dims=[0])), dim=1)
                 weight = torch.tensor([0.5, 0.5], dtype=torch.float)
             else:
                 # home win
-                index = torch.flip(match, dims=[0])
-                weight = torch.tensor([1], dtype=torch.float)
+                index = torch.cat((match, torch.flip(match, dims=[0])), dim=1)
+                weight = torch.tensor([-1, +1], dtype=torch.float)
 
         if validation:
             weight = None
@@ -325,7 +350,7 @@ class Trainer:
             validation: bool = False,
             clip_grad: bool = False,
             bidir: bool = False,
-            gamma: float = 1.
+            gamma: float = 1.45
     ) -> tuple[int, float]:
         if validation:
             self.model.eval()
@@ -341,27 +366,34 @@ class Trainer:
 
             home, away = match = matches[:, m]
             home_pts, away_pts = match_points[m, :]
-            if self.model.rating_str == "elo":
-                y = outcomes[m, :].to(torch.float)
+
+            if self.model.rating_str == "berrar":
+                y = torch.cat((away_pts.unsqueeze(0), home_pts.unsqueeze(0)), dim=0).to(self.device, torch.float)
+                # rescale between 0 and 1
+                max_abs_value = torch.max(torch.abs(y))
+                y = y / max_abs_value
+            elif self.model.rating_str == "pi":
+                g_d_home = home_pts - away_pts
+                g_d_away = away_pts - home_pts
+                y = torch.cat((g_d_away.unsqueeze(0), g_d_home.unsqueeze(0)), dim=0).to(self.device, torch.float)
+                # rescale between 0 and 1
+                max_abs_value = torch.max(torch.abs(y))
+                y = y / max_abs_value
             else:
-                y = match_points[m, :].to(torch.float)
-                y = F.normalize(y, p=float('inf'), dim=0)
+                # elo, None
+                ...
+            y = outcomes[m, :].to(torch.float)
 
-            edge_index, edge_weight = self._create_edge_index_and_weight(
-                match, y, validation, bidir=bidir
-            )
-
+            edge_index, edge_weight = self._create_edge_index_and_weight(match, y, validation, bidir=bidir)
 
             point_diff = torch.abs(home_pts - away_pts)
 
             y_hat = self.model(edge_index, home, away, edge_weight, home_pts, away_pts)
 
-            # y.requires_grad = True
+            target = torch.argmax(outcomes[m, :])
+            prediction = torch.argmax(y_hat)
 
-            target = torch.argmax(y) / 2.0
-            prediction = torch.argmax(y_hat) / 2.0
-
-            accuracy += 1 if abs(target - prediction) < 0.5 else 0
+            accuracy += 1 if abs(target - prediction) < 0.1 else 0
 
             loss = self._loss_fn(y, y_hat, (point_diff + 1) ** gamma)
             loss.retains_grad_ = True
@@ -481,7 +513,6 @@ class Trainer:
             target = torch.argmax(outcome) / 2.0
             target = target.detach()
 
-            goal_diff = y_hat[0] - y_hat[1]
             prediction = 1 if y_hat[0] > y_hat[1] else 0 if y_hat[0] < y_hat[1] else 0.5
 
             accuracy += 1 if abs(target - prediction) < 0.5 else 0
@@ -490,9 +521,6 @@ class Trainer:
             if not self.model.is_manual:
                 y.requires_grad = True
 
-            loss = self._loss_fn(y, y_hat)
-            loss_acc += loss.item()
-
             if validation:
                 continue
 
@@ -500,6 +528,8 @@ class Trainer:
                 home_pts, away_pts = match_points[m, 0], match_points[m, 1]
                 self.model.backward([home_pts, away_pts])
             else:
+                loss = self._loss_fn(y, y_hat)
+                loss_acc += loss.item()
                 loss.backward()
                 if clip_grad:
                     torch.nn.utils.clip_grad_norm_(self.model.hyperparams, max_norm=1)
