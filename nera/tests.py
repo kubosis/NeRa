@@ -81,7 +81,7 @@ def test_eval_rating_gnn(transform, **kwargs):
         )
         target_dim = 3
 
-    embed_dim = 16
+    embed_dim = 32
     rtg = kwargs.pop("rtg")
 
     model = RatingRGNN(
@@ -89,12 +89,12 @@ def test_eval_rating_gnn(transform, **kwargs):
         embed_dim=embed_dim,
         target_dim=target_dim,
         discount=0.94,
-        correction=True,
+        correction=False,
         activation="lrelu",
         rgnn_conv="GCONV_ELMAN",
-        normalization=None,
+        normalization="rw",
         graph_conv="ChebConv",
-        dense_layers=0,
+        dense_layers=1,
         conv_layers=11,
         dropout_rate=0.2,
         rating=rtg,
@@ -108,18 +108,20 @@ def test_eval_rating_gnn(transform, **kwargs):
         dataset,
         model,
         loss_fn=torch.nn.CrossEntropyLoss(),
-        lr=0.011252507229006678,
-        lr_rating=0.729733367528592,
+        lr=0.03,
+        lr_rating=3.72,
         train_ratio=1,
     )
-
-    trn_acc, val_acc = trainer.train(epochs=1, val_ratio=0.1, verbose=True, bidir=True)
+    predictions_arr = []
+    trn_acc, val_acc = trainer.train(epochs=1, val_ratio=0, verbose=True, bidir=True, predictions=predictions_arr)
 
     if rtg is None:
         rtg = "norating"
 
     np.savetxt(rtg + "_" + dataset_str + "_val.log", val_acc)
     np.savetxt(rtg + "_" + dataset_str + "_train.log", trn_acc)
+
+    np.savetxt("best_predictions.txt", predictions_arr, fmt="%.4f")
 
     # print_embedding_progression(model, trainer, transform.num_teams, True, embed_dim)
 
@@ -186,11 +188,12 @@ def eval_manual(df, dataset_str, rating="Elo"):
     else:
         ...
         # r = PiManual(transform.num_teams)
-    trainer = Trainer(dataset, r)
-
-    trn_acc, val_acc = trainer.train(epochs=1, val_ratio=0.1, verbose=True, bidir=True)
+    trainer = Trainer(dataset, r, train_ratio=1)
+    pred_arr = []
+    trn_acc, val_acc = trainer.train(epochs=1, val_ratio=0, verbose=True, bidir=True, predictions=pred_arr)
     np.savetxt("Manual" + rating + "_" + dataset_str + "_val.log", val_acc)
     np.savetxt("Manual" + rating + "_" + dataset_str + "_train.log", trn_acc)
+    np.savetxt(f"{rating}_predictions.txt", np.array(pred_arr), fmt="%.4f")
 
 
 def nbl(rtg):
@@ -230,8 +233,9 @@ def main():
     #    test_fn=test_eval_rating_gnn, conf="hah", dummy_id=0
     # )
     # test_dummy_id_all(test_fn=gnn_rating_test, rating='berrar', verbose=True)
-    # nbl("Elo_manual")
-    test_eval("berrar", "european_basket", "../resources/european_leagues_basketball.csv")
+    nbl("Elo_manual")
+    #nbl("pi")
+    #test_eval("pi", "european_basket", "../resources/european_leagues_basketball.csv")
     # test_eval("Berrar_manual", "Premier", "../resources/Premier_League_England.csv")
     # test_eval("elo", "NFL", "../resources/NFL_USA.csv")
 

@@ -99,7 +99,7 @@ class RatingRGNN(RecurrentGNN):
             # since elo already gives probability no need to use softmax
             self.out_layer = nn.Identity(self.target_dim)
         else:
-            self.out_layer = RescaleByMax()
+            self.out_layer = nn.Softmax()
 
     def _resolve_rating(self, rating: Optional[str], **rating_kwargs):
         in_channels = self.rating_dim

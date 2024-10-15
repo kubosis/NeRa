@@ -5,10 +5,10 @@ from ..._general_rating import *
 class EloModel(_GeneralRating):
     _params = {
         "k": torch.tensor(3.0, dtype=torch.float64),
-        "gamma": torch.tensor(2.0, dtype=torch.float64),
+        "gamma": torch.tensor(0.2, dtype=torch.float64),
         "c": torch.tensor(3.0, dtype=torch.float64),
-        "d": torch.tensor(0.8, dtype=torch.float64),
-        "default": torch.tensor(1000.0, dtype=torch.float64),
+        "d": torch.tensor(8, dtype=torch.float64),
+        "default": torch.tensor(1.0, dtype=torch.float64),
     }
 
     _learnable = {key: False for key in _params}

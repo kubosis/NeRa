@@ -2,6 +2,7 @@ from typing import Optional, Sequence
 
 import torch
 import torch.nn.functional as F
+from sqlalchemy.dialects.postgresql import array
 from torch import Tensor
 import torch.nn as nn
 from torch_geometric_temporal.signal import (
@@ -11,7 +12,7 @@ from torch_geometric_temporal.signal import (
 import numpy as np
 from loguru import logger
 
-from .models.loss import WeightedMSELoss
+from models.loss import WeightedMSELoss
 
 
 class Trainer:
@@ -204,6 +205,9 @@ class Trainer:
                     trn_acc_i, trn_loss_i = self._train_gnn(
                         matches_train, y_train, match_pts_trn, verbose, **kwargs
                     )
+
+                logger.info(f"Training {time} ended with loss {trn_loss_i:.4f} and accuracy {trn_acc_i / trn_count_i:.4f}")
+
                 trn_acc += trn_acc_i
                 trn_loss += trn_loss_i
 
@@ -227,11 +231,11 @@ class Trainer:
                 if epochs == 1:
                     if self.model_is_rating:
                         trn_acc_ii, trn_loss_ii = self._train_rating(
-                            matches_val, y_val, match_pts_val, **kwargs
+                            matches_val, y_val, match_pts_val,
                         )
                     else:
                         trn_acc_ii, trn_loss_ii = self._train_gnn(
-                            matches_val, y_val, match_pts_val, verbose, **kwargs
+                            matches_val, y_val, match_pts_val, verbose,
                         )
 
                     trn_acc += trn_acc_ii
@@ -350,7 +354,8 @@ class Trainer:
             validation: bool = False,
             clip_grad: bool = False,
             bidir: bool = False,
-            gamma: float = 1.45
+            gamma: float = 1.45,
+            predictions = None
     ) -> tuple[int, float]:
         if validation:
             self.model.eval()
@@ -392,6 +397,8 @@ class Trainer:
 
             target = torch.argmax(outcomes[m, :])
             prediction = torch.argmax(y_hat)
+            if predictions is not None:
+                predictions.append(float(y_hat[1]))
 
             accuracy += 1 if abs(target - prediction) < 0.1 else 0
 
@@ -441,7 +448,7 @@ class Trainer:
             raise RuntimeError("Unknown rating model type")
 
     def _train_elo(
-            self, matches, outcomes, match_points, validation, clip_grad, **kwargs
+            self, matches, outcomes, match_points, validation, clip_grad, predictions=None, **kwargs
     ) -> tuple[int, float]:
         if validation:
             self.model.eval()
@@ -463,6 +470,8 @@ class Trainer:
             target = torch.argmax(y)
             target = target.detach()
             prediction = y_hat
+            if predictions is not None:
+                predictions.append(float(prediction))
 
             accuracy += 1 if abs(target - prediction) < 0.5 else 0
 
