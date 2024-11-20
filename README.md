@@ -1,6 +1,6 @@
 ![NeRa LOGO](./docs/logo_plus_text.png)
 
-PyTorch based package for incorporating rating systems to neural networks.
+PyTorch based package for incorporating rating systems to neural networks. This package provides model rating layers. The resulting RatingRGNN can be found [here](https://github.com/kubosis/rating_gnn)
 
 ### Prerequisities
 
