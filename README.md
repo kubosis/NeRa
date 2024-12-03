@@ -2,7 +2,7 @@
 [![PyPI version](https://badge.fury.io/py/torch-rating.svg)](https://badge.fury.io/py/torch-rating)
 
 
-![NeRa LOGO](https://raw.githubusercontent.com/kubosis/torch-rating/blob/main/docs/logo2.webp)
+![NeRa LOGO](https://raw.githubusercontent.com/kubosis/torch-rating/refs/heads/main/docs/logo3.webp)
 
 PyTorch based package for incorporating rating systems to neural networks. This package provides model rating layers. The resulting RatingRGNN can be found [here](https://github.com/kubosis/rating_gnn)
 
@@ -30,15 +30,15 @@ This project was developed as my Bachelor's thesis.
 - Berrar rating
 - Pi rating
 
-![RatingRGNN architecture](./docs/img/ratingRGNN.svg)
+![RatingRGNN architecture](https://raw.githubusercontent.com/kubosis/torch-rating/2d80c8f9b6f3faaf0a5a8e1d9cbecc8c7a2f44f3/docs/img/ratingRGNN.svg)
 
 
 ### Showcases of predictive validation accuracy on collected datasets:
 
 Note: the RatingRGNN was fine-tuned only on the NBL dataset and then applied across the other.
 
-![RatingRGNN architecture](./docs/img/validation.png)
+![RatingRGNN architecture](https://github.com/kubosis/torch-rating/blob/main/docs/img/validation.png?raw=true)
 
 Note: the accuracy is across time snapshots. These snapshots represent seasons. They do not represents epochs of iterating the whole dataset. The training was done only for one epoch.
 
-![RatingRGNN architecture](./docs/img/train_val_acc.png)
+![RatingRGNN architecture](https://github.com/kubosis/torch-rating/blob/main/docs/img/train_val_acc.png?raw=true)
