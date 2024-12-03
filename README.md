@@ -1,4 +1,8 @@
-![NeRa LOGO](./docs/logo3.webp)
+![Flake8 Status](https://github.com/kubosis/torch-rating/actions/workflows/quality.yml/badge.svg)
+[![PyPI version](https://badge.fury.io/py/torch-rating.svg)](https://badge.fury.io/py/torch-rating)
+
+
+![NeRa LOGO](https://raw.githubusercontent.com/kubosis/torch-rating/blob/main/docs/logo2.webp)
 
 PyTorch based package for incorporating rating systems to neural networks. This package provides model rating layers. The resulting RatingRGNN can be found [here](https://github.com/kubosis/rating_gnn)
 
