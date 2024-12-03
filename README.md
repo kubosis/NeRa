@@ -1,19 +1,18 @@
-![NeRa LOGO](./docs/logo_plus_text.png)
+![NeRa LOGO](./docs/logo3.webp)
 
 PyTorch based package for incorporating rating systems to neural networks. This package provides model rating layers. The resulting RatingRGNN can be found [here](https://github.com/kubosis/rating_gnn)
 
 ### Prerequisities
 
 ```
-Python >= 3.11
+Python >= 3.10
 ```
 
 ### Installation
 
 ```commandline
-$ pip install --upgrade pip
-$ pip install torch==2.1.2
-$ pip install git+https://github.com/kubosis/NeRa.git
+pip install --upgrade pip
+pip install torch-rating
 ```
 
 ### Nera - Neural rating
@@ -25,9 +24,7 @@ This project was developed as my Bachelor's thesis.
 
 - Elo rating
 - Berrar rating
-- Pi rating 
-- GConvElman
-- RatingRGNN
+- Pi rating
 
 ![RatingRGNN architecture](./docs/img/ratingRGNN.svg)
 
