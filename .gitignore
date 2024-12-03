@@ -16,6 +16,12 @@ sync.sh
 
 .run/
 
+/nera-*
+/dist/
+/build/
+
+/venv/
+
 *.log
 *.npy
 .coverage

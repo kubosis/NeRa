@@ -4,13 +4,22 @@ import torch
 
 class Elo(nn.Module):
     """
-    Elo with autograd numerical backward pass (for development details see _standalone/_elo/*.py)
+    Elo with autograd numerical backward pass
 
     Loss function should be weighted MSE, where Weight is the goal difference in the match raised to the power of
     EloAutoGrad.gamma parameter or CrossEntropyLoss. In case of CrossEntropyLoss the goal difference is
     not accounted for.
 
     Outputs tensor of same shape as Input
+
+    Forward Computation:
+    $E_H = \frac{1}{1 + c^{\frac{a_i - h_i}{d}}}$
+
+    $E_A = 1 - E_H$
+
+    Where:
+    - $h_i$: home team rating
+    - $a_i$: away team rating
     """
 
     def __init__(
