@@ -7,7 +7,7 @@ find = {}
 
 [project]
 name = "torch-rating"
-version = "0.0.1b"
+version = "0.0.1c"
 description = "Seamless integration of sports rating systems as layers into pytorch environment"
 readme = "README.md"
 requires-python = ">=3.10"
