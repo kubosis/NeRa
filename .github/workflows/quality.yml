@@ -1,13 +1,13 @@
 name: Code Quality
 
+# on every push and pull to every branch
 on:
   push:
-    branches: [ main, dev ]
   pull_request:
-    branches: [ main, dev ]
+
 
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
