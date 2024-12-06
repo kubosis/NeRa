@@ -1,5 +1,5 @@
 ![Flake8 Status](https://github.com/kubosis/torch-rating/actions/workflows/quality.yml/badge.svg)
-[![PyPI version](https://badge.fury.io/py/torch-rating.svg)](https://badge.fury.io/py/torch-rating)
+[![PyPI version](https://img.shields.io/pypi/v/torch-rating.svg)](https://pypi.org/project/torch-rating/)
 
 
 ![NeRa LOGO](https://github.com/kubosis/torch-rating/blob/main/docs/logo3.png?raw=true)
