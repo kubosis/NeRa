@@ -9,7 +9,7 @@ resources/.~lock.*.csv#
 
 nera.egg-info/
 
-nera/mlruns/
+torch_rating/mlruns/
 mlruns/
 
 sync.sh

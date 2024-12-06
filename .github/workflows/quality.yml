@@ -22,4 +22,4 @@ jobs:
           pip install mypy
           pip install flake8
 
-      - run: flake8 --ignore=E501,F401,F403,F405,F541 nera
+      - run: flake8 --ignore=E501,F401,F403,F405,F541 torch_rating
