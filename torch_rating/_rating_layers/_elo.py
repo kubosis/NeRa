@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 
 
-class Elo(nn.Module):
+class EloLayer(nn.Module):
     """
     Elo with autograd numerical backward pass
 
@@ -38,7 +38,7 @@ class Elo(nn.Module):
         """
         assert in_channels > 0
 
-        super(Elo, self).__init__()
+        super(EloLayer, self).__init__()
         self.gamma = gamma
         self.in_channels = in_channels
         self.c = nn.Parameter(torch.tensor(c, dtype=torch.float), requires_grad=hp_grad)

@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch
 
 
-class Pi(nn.Module):
+class PiLayer(nn.Module):
     def __init__(self,
                  in_channels: int,
                  lambda_: float = 0.1,
@@ -12,7 +12,7 @@ class Pi(nn.Module):
                  c: float = 3.,
                  ):
         assert in_channels % 2 == 0 and in_channels > 0
-        super(Pi, self).__init__()
+        super(PiLayer, self).__init__()
 
         self.in_channels = in_channels
 

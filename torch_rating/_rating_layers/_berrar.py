@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 
 
-class Berrar(nn.Module):
+class BerrarLayer(nn.Module):
     """
     Berra with gradient with numerical backward pass via torch autograd system
 
@@ -33,7 +33,7 @@ class Berrar(nn.Module):
         """
         assert in_channels % 2 == 0 and in_channels > 0
 
-        super(Berrar, self).__init__()
+        super(BerrarLayer, self).__init__()
 
         self.in_channels = in_channels
 
